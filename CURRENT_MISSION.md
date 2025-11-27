@@ -17,7 +17,7 @@
 ## 📋 Implementation Plan
 
 ### Phase 0: Project Setup & Architecture
-- [ ] Initialize Next.js 14+ project with TypeScript
+- [ ] Initialize React Router v7 project with TypeScript + Vite
 - [ ] Configure Tailwind CSS for styling
 - [ ] Set up Vitest for unit testing
 - [ ] Set up Playwright for E2E testing
@@ -48,15 +48,15 @@
 - [ ] Create `components/TransferList/TransferList.test.tsx`
 - [ ] Implement `components/TransferList/TransferList.tsx`
 
-### Phase 3: Pages & Routing
-- [ ] Create `app/page.test.tsx` (home page - league dashboard)
-- [ ] Implement `app/page.tsx` (league overview)
-- [ ] Create `app/gameweeks/page.test.tsx`
-- [ ] Implement `app/gameweeks/page.tsx` (gameweek history)
-- [ ] Create `app/gameweeks/[id]/page.test.tsx`
-- [ ] Implement `app/gameweeks/[id]/page.tsx` (single gameweek detail)
-- [ ] Create `app/transfers/page.test.tsx`
-- [ ] Implement `app/transfers/page.tsx` (transfers overview)
+### Phase 3: Routes & Pages (React Router v7)
+- [ ] Create `app/routes/_index.test.tsx` (home page - league dashboard)
+- [ ] Implement `app/routes/_index.tsx` with loader (league overview)
+- [ ] Create `app/routes/gameweeks.test.tsx`
+- [ ] Implement `app/routes/gameweeks.tsx` with loader (gameweek history)
+- [ ] Create `app/routes/gameweeks.$id.test.tsx`
+- [ ] Implement `app/routes/gameweeks.$id.tsx` with loader (single gameweek detail)
+- [ ] Create `app/routes/transfers.test.tsx`
+- [ ] Implement `app/routes/transfers.tsx` with loader (transfers overview)
 
 ### Phase 4: State Management & Data Fetching
 - [ ] Create `hooks/useFPLData.test.ts`
@@ -96,7 +96,7 @@
 **AWAITING USER APPROVAL TO BEGIN PHASE 0**
 
 Please review the plan above. Key decisions to confirm:
-1. **Tech Stack:** Next.js 14 + TypeScript + Tailwind CSS - acceptable?
+1. **Tech Stack:** React Router v7 + Vite + TypeScript + Tailwind CSS - acceptable?
 2. **Testing:** Vitest (unit) + Playwright (E2E) - acceptable?
 3. **FPL API:** Will use unofficial FPL API endpoints - do you have a league ID ready?
 4. **Scope:** Should we start with Phase 0-1 (foundation + data layer) or adjust priorities?
