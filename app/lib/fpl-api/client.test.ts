@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchBootstrapStatic, fetchLeagueStandings } from "./client";
-import type { FPLBootstrapStatic, FPLLeagueStandings } from "./types";
+import {
+  fetchBootstrapStatic,
+  fetchLeagueStandings,
+  fetchManagerHistory,
+  fetchManagerTransfers,
+} from "./client";
+import type {
+  FPLBootstrapStatic,
+  FPLLeagueStandings,
+  FPLManagerHistory,
+  FPLManagerTransfers,
+} from "./types";
 
 // Mock global fetch
 global.fetch = vi.fn();
@@ -195,6 +205,142 @@ describe("FPL API Client", () => {
         "https://fantasy.premierleague.com/api/leagues-classic/1313411/standings/?page_standings=2"
       );
       expect(result.standings.page).toBe(2);
+    });
+  });
+
+  describe("fetchManagerHistory", () => {
+    it("should fetch and return manager history", async () => {
+      const mockData: FPLManagerHistory = {
+        current: [
+          {
+            event: 1,
+            points: 65,
+            total_points: 65,
+            rank: 2345678,
+            rank_sort: 2345678,
+            overall_rank: 2345678,
+            bank: 5,
+            value: 1000,
+            event_transfers: 0,
+            event_transfers_cost: 0,
+            points_on_bench: 12,
+          },
+          {
+            event: 2,
+            points: 78,
+            total_points: 143,
+            rank: 1234567,
+            rank_sort: 1234567,
+            overall_rank: 1234567,
+            bank: 10,
+            value: 1005,
+            event_transfers: 1,
+            event_transfers_cost: 0,
+            points_on_bench: 8,
+          },
+        ],
+        past: [],
+        chips: [
+          {
+            name: "wildcard",
+            time: "2024-09-15T10:30:00Z",
+            event: 5,
+          },
+        ],
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerHistory("789012");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://fantasy.premierleague.com/api/entry/789012/history/"
+      );
+      expect(result).toEqual(mockData);
+      expect(result.current).toHaveLength(2);
+      expect(result.current[0].points).toBe(65);
+      expect(result.chips).toHaveLength(1);
+    });
+
+    it("should throw error for invalid manager ID", async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+      });
+
+      await expect(fetchManagerHistory("9999999")).rejects.toThrow(
+        "Failed to fetch manager history: 404 Not Found"
+      );
+    });
+  });
+
+  describe("fetchManagerTransfers", () => {
+    it("should fetch and return manager transfers", async () => {
+      const mockData: FPLManagerTransfers = [
+        {
+          element_in: 234,
+          element_in_cost: 85,
+          element_out: 123,
+          element_out_cost: 90,
+          entry: 789012,
+          event: 2,
+          time: "2024-08-23T18:45:00Z",
+        },
+        {
+          element_in: 456,
+          element_in_cost: 105,
+          element_out: 234,
+          element_out_cost: 85,
+          entry: 789012,
+          event: 3,
+          time: "2024-08-30T19:00:00Z",
+        },
+      ];
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerTransfers("789012");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://fantasy.premierleague.com/api/entry/789012/transfers/"
+      );
+      expect(result).toEqual(mockData);
+      expect(result).toHaveLength(2);
+      expect(result[0].element_in).toBe(234);
+      expect(result[1].event).toBe(3);
+    });
+
+    it("should throw error for invalid manager ID", async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+      });
+
+      await expect(fetchManagerTransfers("9999999")).rejects.toThrow(
+        "Failed to fetch manager transfers: 404 Not Found"
+      );
+    });
+
+    it("should handle empty transfers array", async () => {
+      const mockData: FPLManagerTransfers = [];
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerTransfers("789012");
+
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 });
