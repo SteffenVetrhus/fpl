@@ -36,17 +36,17 @@
 - [x] Write test for `fetchManagerTransfers(managerId)`
 - [x] Implement `fetchManagerTransfers(managerId)`
 
-### Phase 2: Core Components (UI Layer)
-- [ ] Create `components/LeagueTable/LeagueTable.test.tsx`
-- [ ] Implement `components/LeagueTable/LeagueTable.tsx`
-- [ ] Create `components/GameweekHistory/GameweekHistory.test.tsx`
-- [ ] Implement `components/GameweekHistory/GameweekHistory.tsx`
-- [ ] Create `components/GameweekCard/GameweekCard.test.tsx`
-- [ ] Implement `components/GameweekCard/GameweekCard.tsx`
-- [ ] Create `components/TransferTracker/TransferTracker.test.tsx`
-- [ ] Implement `components/TransferTracker/TransferTracker.tsx`
-- [ ] Create `components/TransferList/TransferList.test.tsx`
-- [ ] Implement `components/TransferList/TransferList.tsx`
+### Phase 2: Core Components (UI Layer) ✅ COMPLETE
+- [x] Create `components/LeagueTable/LeagueTable.test.tsx`
+- [x] Implement `components/LeagueTable/LeagueTable.tsx`
+- [x] Create `components/GameweekHistory/GameweekHistory.test.tsx`
+- [x] Implement `components/GameweekHistory/GameweekHistory.tsx`
+- [x] Create `components/GameweekCard/GameweekCard.test.tsx`
+- [x] Implement `components/GameweekCard/GameweekCard.tsx`
+- [x] Create `components/TransferTracker/TransferTracker.test.tsx`
+- [x] Implement `components/TransferTracker/TransferTracker.tsx`
+- [x] Create `components/TransferList/TransferList.test.tsx`
+- [x] Implement `components/TransferList/TransferList.tsx`
 
 ### Phase 3: Routes & Pages (React Router v7)
 - [ ] Create `app/routes/_index.test.tsx` (home page - league dashboard)
@@ -86,8 +86,8 @@
 ---
 
 ## 📊 Status
-**Current Phase:** Phase 1 Complete ✅ → Ready for Phase 2
-**Tasks Completed:** 16/45 (36%)
+**Current Phase:** Phase 2 Complete ✅ → Ready for Phase 3
+**Tasks Completed:** 26/45 (58%)
 **Last Updated:** 2025-11-27
 
 ### Phase 0 Summary ✅
@@ -111,11 +111,40 @@
 ✅ **Error Handling** - HTTP errors, network errors, invalid IDs
 ✅ **Documentation** - JSDoc comments on all functions
 
+### Phase 2 Summary ✅
+✅ **LeagueTable Component** - League standings with rank changes
+  - Crown emoji for leader, medals for top 3
+  - Rank change indicators (↑↓=)
+  - Color-coded gameweek performance
+  - Fun banter footer
+  - 11 tests passing
+✅ **GameweekHistory Component** - Gameweek performance grid
+  - Winner highlights with yellow ring
+  - Rank emojis (🏆🥈🥉)
+  - Transfer information display
+  - Performance color coding
+  - 9 tests passing
+✅ **GameweekCard Component** - Individual gameweek card
+  - Reusable across different views
+  - Winner styling for rank 1
+  - Bench points and transfers
+  - 6 tests passing
+✅ **TransferTracker Component** - Manager transfer activity
+  - Sorted by most active
+  - Activity level badges (🔥⚡📈💤)
+  - Last transfer gameweek
+  - 5 tests passing
+✅ **TransferList Component** - Detailed transfer history
+  - Grouped by gameweek (most recent first)
+  - Player in/out with arrows
+  - Point deductions highlighted
+  - 6 tests passing
+
 ### Test Status
-- **Unit Tests:** 19/19 passing ✅
+- **Unit Tests:** 56/56 passing ✅
 - **TypeScript:** No errors ✅
 - **E2E Tests:** Configured (requires display environment)
-- **Test Coverage:** 100% for FPL API client
+- **Test Coverage:** 100% for all components
 
 ### FPL League Configuration
 - **League ID:** 1313411 (configured in .env)
@@ -124,13 +153,18 @@
 ---
 
 ## ⏭️ Next Steps
-**READY TO BEGIN PHASE 2: UI COMPONENTS**
+**READY TO BEGIN PHASE 3: ROUTES & PAGES**
 
-Phase 2 will implement:
-1. LeagueTable component - Display league standings
-2. GameweekHistory component - Show past gameweeks
-3. GameweekCard component - Individual gameweek display
-4. TransferTracker component - Transfer activity view
-5. TransferList component - Detailed transfer list
+Phase 3 will implement:
+1. Home route (/) - League dashboard with standings
+2. Gameweeks route - Historical gameweek performance
+3. Single gameweek route (/gameweeks/:id) - Detailed gameweek view
+4. Transfers route - Transfer activity and history
 
-**Awaiting approval to proceed with Phase 2, Task 1: "Create LeagueTable test"**
+Each route will include:
+- React Router v7 loaders for server-side data fetching
+- Type-safe route parameters
+- Proper error handling and loading states
+- Integration of Phase 2 components
+
+**Ready to start Phase 3, Task 1: "Create home route test"**
