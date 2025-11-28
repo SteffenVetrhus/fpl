@@ -83,7 +83,11 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
                   {manager.teamName}
                 </p>
               </div>
-              <GameweekHistory gameweeks={manager.gameweeks} />
+              <GameweekHistory
+                gameweeks={manager.gameweeks}
+                managerName={manager.name}
+                allManagers={managers}
+              />
             </div>
           ))}
         </div>

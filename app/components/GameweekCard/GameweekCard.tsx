@@ -2,13 +2,15 @@ import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
 
 interface GameweekCardProps {
   gameweek: FPLManagerGameweek;
+  isWinner: boolean;
 }
 
-export function GameweekCard({ gameweek }: GameweekCardProps) {
+export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
   const getRankEmoji = (rank: number) => {
-    if (rank === 1) return "🏆";
+    // Rank emojis based on overall league position, not gameweek winner
     if (rank === 2) return "🥈";
     if (rank === 3) return "🥉";
+    if (rank <= 5) return "⭐";
     return "";
   };
 
@@ -18,13 +20,22 @@ export function GameweekCard({ gameweek }: GameweekCardProps) {
     return "text-red-600 dark:text-red-400";
   };
 
-  const cardClassName =
-    gameweek.rank === 1
-      ? "rounded-lg border-2 border-yellow-400 p-4 bg-yellow-50 dark:bg-yellow-900/10"
-      : "rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900";
+  // Winner styling based on highest gameweek points, not league rank
+  const cardClassName = isWinner
+    ? "rounded-lg border-2 border-yellow-400 p-4 bg-yellow-50 dark:bg-yellow-900/10"
+    : "rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900";
 
   return (
     <div className={cardClassName}>
+      {/* Winner Badge */}
+      {isWinner && (
+        <div className="mb-3 text-center">
+          <span className="inline-block px-3 py-1 bg-yellow-400 dark:bg-yellow-500 text-yellow-900 dark:text-yellow-950 text-xs font-bold rounded-full">
+            ⭐ GAMEWEEK WINNER ⭐
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
