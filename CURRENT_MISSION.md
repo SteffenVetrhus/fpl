@@ -56,13 +56,26 @@
 - [x] Create `app/routes/transfers.test.tsx`
 - [x] Implement `app/routes/transfers.tsx` with loader (transfers overview)
 
-### Phase 4: State Management & Data Fetching
-- [ ] Create `hooks/useFPLData.test.ts`
-- [ ] Implement `hooks/useFPLData.ts` (React Query/SWR)
-- [ ] Create `hooks/useLeagueStandings.test.ts`
-- [ ] Implement `hooks/useLeagueStandings.ts`
-- [ ] Create `hooks/useGameweekWinner.test.ts`
-- [ ] Implement `hooks/useGameweekWinner.ts`
+### Phase 4: Enhanced Features & Bug Fixes (14 tasks)
+**See detailed spec in `docs/PHASE_4_SPEC.md`**
+
+**Phase 4A: Fix Gameweek Winner Logic (CRITICAL BUG) - 6 tasks**
+- [ ] Create `utils/gameweek-winner.test.ts`
+- [ ] Implement `utils/gameweek-winner.ts`
+- [ ] Update `GameweekCard.test.tsx` (add `isWinner` prop)
+- [ ] Update `GameweekCard.tsx` (use `isWinner` instead of rank)
+- [ ] Update `GameweekHistory.test.tsx` (test correct winner highlighting)
+- [ ] Update `GameweekHistory.tsx` (calculate winners from points)
+
+**Phase 4B: Player Filtering & Single View - 8 tasks**
+- [ ] Create `components/PlayerSelector/PlayerSelector.test.tsx`
+- [ ] Implement `components/PlayerSelector/PlayerSelector.tsx`
+- [ ] Create `components/PlayerStats/PlayerStats.test.tsx`
+- [ ] Implement `components/PlayerStats/PlayerStats.tsx`
+- [ ] Update `routes/gameweeks.test.tsx` (single player view)
+- [ ] Update `routes/gameweeks.tsx` (player selector + URL params)
+- [ ] Create `utils/player-tags.test.ts` (optional)
+- [ ] Implement `utils/player-tags.ts` (optional)
 
 ### Phase 5: Polish & Documentation
 - [ ] Add loading states to all components
@@ -84,8 +97,9 @@
 ---
 
 ## 📊 Status
-**Current Phase:** Phase 3 Complete ✅ → MVP Ready!
-**Tasks Completed:** 32/45 (71%)
+**Current Phase:** Phase 3 Complete ✅ → Ready for Phase 4
+**Tasks Completed:** 32/46 (70%)
+**Next Up:** Fix gameweek winner logic (CRITICAL BUG)
 **Last Updated:** 2025-11-28
 
 ### Phase 0 Summary ✅
