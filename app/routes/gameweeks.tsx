@@ -7,7 +7,7 @@ import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
 
 export async function loader() {
   const config = getEnvConfig();
-  const leagueData = await fetchLeagueStandings(config.FPL_LEAGUE_ID);
+  const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
   // Fetch gameweek history for each manager
   const managers = await Promise.all(

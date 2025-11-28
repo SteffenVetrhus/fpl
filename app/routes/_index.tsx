@@ -6,7 +6,7 @@ import type { Route } from "./+types/_index";
 
 export async function loader() {
   const config = getEnvConfig();
-  const data = await fetchLeagueStandings(config.FPL_LEAGUE_ID);
+  const data = await fetchLeagueStandings(config.fplLeagueId);
   return data;
 }
 

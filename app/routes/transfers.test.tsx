@@ -6,7 +6,7 @@ import type { FPLLeagueStandings, FPLManagerTransfers } from "~/lib/fpl-api/type
 
 vi.mock("~/lib/fpl-api/client");
 vi.mock("~/config/env", () => ({
-  getEnvConfig: () => ({ FPL_LEAGUE_ID: "1313411" }),
+  getEnvConfig: () => ({ fplLeagueId: "1313411" }),
 }));
 
 describe("Transfers Route", () => {

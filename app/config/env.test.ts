@@ -22,12 +22,14 @@ describe("getEnvConfig", () => {
   });
 
   it("should return default API base URL if not provided", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
     const config = getEnvConfig();
 
     expect(config.apiBaseUrl).toBe("https://fantasy.premierleague.com/api");
   });
 
   it("should use custom API base URL if provided", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
     process.env.FPL_API_BASE_URL = "https://custom-api.com";
 
     const config = getEnvConfig();
@@ -36,6 +38,7 @@ describe("getEnvConfig", () => {
   });
 
   it("should parse cache settings correctly", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
     process.env.ENABLE_API_CACHE = "true";
     process.env.API_CACHE_DURATION = "600";
 
@@ -46,6 +49,7 @@ describe("getEnvConfig", () => {
   });
 
   it("should use default cache settings if not provided", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
     const config = getEnvConfig();
 
     expect(config.enableCache).toBe(true);

@@ -2,7 +2,7 @@
  * Environment configuration for FPL API
  */
 export interface EnvConfig {
-  fplLeagueId?: string;
+  fplLeagueId: string;
   apiBaseUrl: string;
   enableCache: boolean;
   cacheDuration: number;
@@ -14,8 +14,13 @@ export interface EnvConfig {
  * @returns Environment configuration object
  */
 export function getEnvConfig(): EnvConfig {
+  const leagueId = process.env.FPL_LEAGUE_ID;
+  if (!leagueId) {
+    throw new Error("FPL_LEAGUE_ID environment variable is required");
+  }
+
   return {
-    fplLeagueId: process.env.FPL_LEAGUE_ID,
+    fplLeagueId: leagueId,
     apiBaseUrl:
       process.env.FPL_API_BASE_URL ||
       "https://fantasy.premierleague.com/api",
