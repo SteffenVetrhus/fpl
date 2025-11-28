@@ -75,6 +75,12 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
               Gameweek History
             </Link>
             <Link
+              to="/standings"
+              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Historical Standings
+            </Link>
+            <Link
               to="/transfers"
               className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
             >

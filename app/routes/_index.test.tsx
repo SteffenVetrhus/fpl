@@ -73,7 +73,10 @@ describe("Home Route (_index)", () => {
       { timeout: 3000 }
     );
     expect(aliceElements.length).toBeGreaterThan(0);
-    expect(screen.getByText("Bob Smith")).toBeInTheDocument();
+
+    // Bob Smith appears multiple times due to responsive design
+    const bobElements = screen.getAllByText("Bob Smith");
+    expect(bobElements.length).toBeGreaterThan(0);
   });
 
   it("should display league name in header", async () => {
