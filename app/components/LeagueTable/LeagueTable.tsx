@@ -58,22 +58,22 @@ export function LeagueTable({ standings }: LeagueTableProps) {
       <table className="w-full border-collapse bg-white dark:bg-gray-900">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-800 text-left">
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
               Rank
             </th>
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
               Manager
             </th>
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <th className="hidden lg:table-cell px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
               Team
             </th>
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
-              GW Points
+            <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
+              GW
             </th>
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
+            <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
               Total
             </th>
-            <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-center">
+            <th className="hidden sm:table-cell px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-center">
               Form
             </th>
           </tr>
@@ -81,8 +81,8 @@ export function LeagueTable({ standings }: LeagueTableProps) {
         <tbody>
           {standings.map((manager, index) => (
             <tr key={manager.entry} className={getRowClassName(index)}>
-              <td className="px-4 py-4 text-sm">
-                <div className="flex items-center gap-2">
+              <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <span className="font-bold text-gray-900 dark:text-gray-100">
                     {manager.rank}
                   </span>
@@ -91,17 +91,28 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                   </span>
                 </div>
               </td>
-              <td className="px-4 py-4 text-sm">
-                <div className="font-medium text-gray-900 dark:text-gray-100">
+              <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm">
+                {/* Mobile: stacked name + team */}
+                <div className="lg:hidden">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {manager.player_name}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 italic mt-0.5">
+                    {manager.entry_name}
+                  </div>
+                </div>
+                {/* Desktop: name only */}
+                <div className="hidden lg:block font-medium text-gray-900 dark:text-gray-100">
                   {manager.player_name}
                 </div>
               </td>
-              <td className="px-4 py-4 text-sm">
+              {/* Desktop only: separate team column */}
+              <td className="hidden lg:table-cell px-4 py-4 text-sm">
                 <div className="text-gray-600 dark:text-gray-400 italic">
                   {manager.entry_name}
                 </div>
               </td>
-              <td className="px-4 py-4 text-sm text-right">
+              <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm text-right">
                 <span
                   className={`font-semibold ${
                     manager.event_total >= 80
@@ -114,12 +125,12 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                   {manager.event_total}
                 </span>
               </td>
-              <td className="px-4 py-4 text-sm text-right">
+              <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm text-right">
                 <span className="font-bold text-gray-900 dark:text-gray-100">
                   {formatPoints(manager.total)}
                 </span>
               </td>
-              <td className="px-4 py-4 text-sm text-center">
+              <td className="hidden sm:table-cell px-4 py-4 text-sm text-center">
                 <div className="flex items-center justify-center gap-1">
                   {getRankChangeIcon(manager.rank, manager.last_rank)}
                   <span className="text-xs text-gray-500 dark:text-gray-400">

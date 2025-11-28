@@ -43,18 +43,19 @@ describe("LeagueTable", () => {
   it("should render league table with all managers", () => {
     render(<LeagueTable standings={mockStandings} />);
 
-    // Use getAllByText since names appear in table and footer
+    // Manager names appear multiple times (mobile + desktop + footer)
     expect(screen.getAllByText("Alice Johnson").length).toBeGreaterThan(0);
-    expect(screen.getByText("Bob Smith")).toBeInTheDocument();
+    expect(screen.getAllByText("Bob Smith").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Charlie Brown").length).toBeGreaterThan(0);
   });
 
   it("should display team names", () => {
     render(<LeagueTable standings={mockStandings} />);
 
-    expect(screen.getByText("Alice's Aces")).toBeInTheDocument();
-    expect(screen.getByText("Bob's Bangers")).toBeInTheDocument();
-    expect(screen.getByText("Charlie's Champions")).toBeInTheDocument();
+    // Team names appear multiple times (mobile + desktop views)
+    expect(screen.getAllByText("Alice's Aces").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bob's Bangers").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Charlie's Champions").length).toBeGreaterThan(0);
   });
 
   it("should display total points for each manager", () => {
