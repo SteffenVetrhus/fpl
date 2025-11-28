@@ -6,7 +6,7 @@ import type { Route } from "./+types/transfers";
 
 export async function loader() {
   const config = getEnvConfig();
-  const leagueData = await fetchLeagueStandings(config.FPL_LEAGUE_ID);
+  const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
   // Fetch transfer data for each manager
   const transferData = await Promise.all(
