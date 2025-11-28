@@ -1,7 +1,8 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link, useNavigate, useSearchParams } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { GameweekHistory } from "~/components/GameweekHistory/GameweekHistory";
+import { PlayerSelector } from "~/components/PlayerSelector/PlayerSelector";
 import type { Route } from "./+types/gameweeks";
 import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
 
@@ -26,6 +27,22 @@ export async function loader() {
 
 export default function Gameweeks({ loaderData }: Route.ComponentProps) {
   const { managers } = useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Get selected player from URL or default to first manager
+  const playerParam = searchParams.get("player");
+  const selectedPlayerName =
+    playerParam && managers.find((m) => m.name === playerParam)
+      ? playerParam
+      : managers[0]?.name || "";
+
+  const selectedManager = managers.find((m) => m.name === selectedPlayerName);
+
+  const handlePlayerSelect = (managerName: string) => {
+    // Update URL with selected player
+    navigate(`/gameweeks?player=${encodeURIComponent(managerName)}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -69,24 +86,31 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-12">
-          {managers.map((manager) => (
-            <div
-              key={manager.name}
-              className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6"
-            >
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {manager.name}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                  {manager.teamName}
-                </p>
-              </div>
-              <GameweekHistory gameweeks={manager.gameweeks} />
+        {/* Player Selector */}
+        <PlayerSelector
+          managers={managers}
+          selectedManager={selectedPlayerName}
+          onSelect={handlePlayerSelect}
+        />
+
+        {/* Selected Player's Gameweek History */}
+        {selectedManager && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {selectedManager.name}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                {selectedManager.teamName}
+              </p>
             </div>
-          ))}
-        </div>
+            <GameweekHistory
+              gameweeks={selectedManager.gameweeks}
+              managerName={selectedManager.name}
+              allManagers={managers}
+            />
+          </div>
+        )}
       </main>
     </div>
   );

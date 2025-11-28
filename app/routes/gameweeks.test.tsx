@@ -113,7 +113,9 @@ describe("Gameweeks Route", () => {
     render(<RouteStub initialEntries={["/gameweeks"]} />);
 
     const aliceElements = await screen.findAllByText("Alice Johnson", {}, { timeout: 3000 });
-    expect(aliceElements.length).toBe(1);
+    // Should show name in player selector dropdown and in the header
+    expect(aliceElements.length).toBeGreaterThan(0);
+    expect(screen.getByText("Alice's Aces")).toBeInTheDocument();
   });
 
   it("should show navigation back to home", async () => {
@@ -149,5 +151,85 @@ describe("Gameweeks Route", () => {
     expect(fetchManagerHistory).toHaveBeenCalledWith("123456");
     expect(result.managers).toHaveLength(1);
     expect(result.managers[0].name).toBe("Alice Johnson");
+  });
+
+  it("should show player selector dropdown", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/gameweeks",
+          Component: Gameweeks,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/gameweeks"] }
+    );
+
+    render(<RouteStub initialEntries={["/gameweeks"]} />);
+
+    // Should show player selector
+    expect(await screen.findByRole("combobox", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText(/select player/i)).toBeInTheDocument();
+  });
+
+  it("should show only the selected player's gameweeks", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/gameweeks",
+          Component: Gameweeks,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: [] },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/gameweeks"] }
+    );
+
+    render(<RouteStub initialEntries={["/gameweeks"]} />);
+
+    // Should show Alice's name (first player by default)
+    await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
+
+    // Should show Alice's gameweeks
+    const aliceHeaders = screen.getAllByText("Alice Johnson");
+    expect(aliceHeaders.length).toBeGreaterThan(0);
+
+    // Should NOT show Bob's name as a header (he's not selected)
+    expect(screen.queryByText("Bob's Best")).not.toBeInTheDocument();
+  });
+
+  it("should respect URL player parameter", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/gameweeks",
+          Component: Gameweeks,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: [] },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/gameweeks?player=Bob+Smith"] }
+    );
+
+    render(<RouteStub initialEntries={["/gameweeks?player=Bob+Smith"]} />);
+
+    // Should show Bob's gameweeks based on URL param
+    await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
+
+    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    expect(select.value).toBe("Bob Smith");
   });
 });

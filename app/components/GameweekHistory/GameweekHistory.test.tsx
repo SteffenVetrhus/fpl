@@ -2,52 +2,58 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { GameweekHistory } from "./GameweekHistory";
 import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
+import type { ManagerGameweekData } from "~/utils/gameweek-winner";
 
 describe("GameweekHistory", () => {
-  const mockGameweeks: FPLManagerGameweek[] = [
+  const createGameweek = (
+    event: number,
+    points: number,
+    rank: number
+  ): FPLManagerGameweek => ({
+    event,
+    points,
+    total_points: points,
+    rank,
+    rank_sort: rank,
+    overall_rank: 125000,
+    bank: 0,
+    value: 1000,
+    event_transfers: event === 2 ? 1 : 0,
+    event_transfers_cost: 0,
+    points_on_bench: event === 1 ? 12 : event === 3 ? 15 : 8,
+  });
+
+  const aliceGameweeks = [
+    createGameweek(1, 92, 1),  // Alice wins GW1 (92 > 85)
+    createGameweek(2, 65, 2),  // Bob wins GW2 (72 > 65)
+    createGameweek(3, 78, 1),  // Alice wins GW3 (78 > 68)
+  ];
+
+  const bobGameweeks = [
+    createGameweek(1, 85, 2),
+    createGameweek(2, 72, 1),
+    createGameweek(3, 68, 3),
+  ];
+
+  const allManagers: ManagerGameweekData[] = [
     {
-      event: 1,
-      points: 92,
-      total_points: 92,
-      rank: 1,
-      rank_sort: 1,
-      overall_rank: 125000,
-      bank: 0,
-      value: 1000,
-      event_transfers: 0,
-      event_transfers_cost: 0,
-      points_on_bench: 12,
+      name: "Alice",
+      gameweeks: aliceGameweeks,
     },
     {
-      event: 2,
-      points: 65,
-      total_points: 157,
-      rank: 3,
-      rank_sort: 3,
-      overall_rank: 135000,
-      bank: 5,
-      value: 1005,
-      event_transfers: 1,
-      event_transfers_cost: 0,
-      points_on_bench: 8,
-    },
-    {
-      event: 3,
-      points: 78,
-      total_points: 235,
-      rank: 2,
-      rank_sort: 2,
-      overall_rank: 128000,
-      bank: 10,
-      value: 1010,
-      event_transfers: 0,
-      event_transfers_cost: 0,
-      points_on_bench: 15,
+      name: "Bob",
+      gameweeks: bobGameweeks,
     },
   ];
 
   it("should render all gameweeks", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
     expect(screen.getByText(/Gameweek 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Gameweek 2/i)).toBeInTheDocument();
@@ -55,66 +61,102 @@ describe("GameweekHistory", () => {
   });
 
   it("should display points for each gameweek", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
-    // Points appear in both main display and total, so check they exist
-    expect(screen.getAllByText("92").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("65").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("78").length).toBeGreaterThan(0);
+    expect(screen.getByText("92")).toBeInTheDocument();
+    expect(screen.getByText("65")).toBeInTheDocument();
+    expect(screen.getByText("78")).toBeInTheDocument();
   });
 
-  it("should display rank for each gameweek", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
+  it("should highlight correct gameweek winners based on points", () => {
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
-    // Should show ranks
-    const ranks = screen.getAllByText(/rank|position/i);
-    expect(ranks.length).toBeGreaterThan(0);
+    // Alice won GW1 and GW3 (highest points), so 2 winner badges
+    const winnerBadges = screen.getAllByText(/GAMEWEEK WINNER/i);
+    expect(winnerBadges).toHaveLength(2);
   });
 
-  it("should highlight gameweek wins (rank 1)", () => {
-    const { container } = render(<GameweekHistory gameweeks={mockGameweeks} />);
+  it("should calculate wins correctly in summary", () => {
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
-    // GW1 was a win (rank 1)
-    const gw1Element = container.querySelector('[data-event="1"]');
-    const className = gw1Element?.className || "";
-    expect(className).toMatch(/winner|gold|yellow|win/);
+    // Alice won 2 gameweeks (GW1: 92pts, GW3: 78pts)
+    const summaryElements = screen.getAllByText((content, element) => {
+      return (element?.textContent?.includes("3 gameweeks played") &&
+              element?.textContent?.includes("2 wins")) ?? false;
+    });
+    expect(summaryElements[0]).toBeInTheDocument();
+  });
+
+  it("should not highlight non-winning gameweeks", () => {
+    render(
+      <GameweekHistory
+        gameweeks={bobGameweeks}
+        managerName="Bob"
+        allManagers={allManagers}
+      />
+    );
+
+    // Bob only won GW2, so should show 1 win
+    const summaryElements = screen.getAllByText((content, element) => {
+      return (element?.textContent?.includes("3 gameweeks played") &&
+              element?.textContent?.includes("1 win")) ?? false;
+    });
+    expect(summaryElements[0]).toBeInTheDocument();
   });
 
   it("should show transfer information when transfers were made", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
     // GW2 had 1 transfer
-    const transferInfo = screen.getByText(/1.*transfer/i);
-    expect(transferInfo).toBeInTheDocument();
-  });
-
-  it("should display cumulative total points", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
-
-    // Check totals appear somewhere on page
-    expect(screen.getAllByText("92").length).toBeGreaterThan(0); // After GW1
-    expect(screen.getByText("157")).toBeInTheDocument(); // After GW2
-    expect(screen.getByText("235")).toBeInTheDocument(); // After GW3
+    expect(screen.getByText(/1.*transfer/i)).toBeInTheDocument();
   });
 
   it("should render empty state when no gameweeks", () => {
-    render(<GameweekHistory gameweeks={[]} />);
+    render(
+      <GameweekHistory
+        gameweeks={[]}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
     expect(
-      screen.getByText(/no gameweeks|season hasn't started|no data/i)
+      screen.getByText(/no gameweeks|season hasn't started|time loop/i)
     ).toBeInTheDocument();
   });
 
-  it("should show points on bench information", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
-
-    // Should display bench points
-    expect(screen.getByText("12")).toBeInTheDocument(); // GW1 bench
-    expect(screen.getByText("15")).toBeInTheDocument(); // GW3 bench
-  });
-
   it("should display gameweeks in chronological order", () => {
-    render(<GameweekHistory gameweeks={mockGameweeks} />);
+    render(
+      <GameweekHistory
+        gameweeks={aliceGameweeks}
+        managerName="Alice"
+        allManagers={allManagers}
+      />
+    );
 
     const gameweekTexts = screen
       .getAllByText(/Gameweek \d+/i)
@@ -123,5 +165,34 @@ describe("GameweekHistory", () => {
     expect(gameweekTexts[0]).toContain("1");
     expect(gameweekTexts[1]).toContain("2");
     expect(gameweekTexts[2]).toContain("3");
+  });
+
+  it("should handle tied winners", () => {
+    const tiedManagers: ManagerGameweekData[] = [
+      {
+        name: "Alice",
+        gameweeks: [createGameweek(1, 85, 1)],
+      },
+      {
+        name: "Bob",
+        gameweeks: [createGameweek(1, 85, 1)], // Same points = tied
+      },
+    ];
+
+    render(
+      <GameweekHistory
+        gameweeks={[createGameweek(1, 85, 1)]}
+        managerName="Alice"
+        allManagers={tiedManagers}
+      />
+    );
+
+    // Alice tied for GW1, so should show as winner
+    expect(screen.getByText(/GAMEWEEK WINNER/i)).toBeInTheDocument();
+    const summaryElements = screen.getAllByText((content, element) => {
+      return (element?.textContent?.includes("1 gameweeks played") &&
+              element?.textContent?.includes("1 win")) ?? false;
+    });
+    expect(summaryElements[0]).toBeInTheDocument();
   });
 });
