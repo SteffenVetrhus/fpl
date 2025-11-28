@@ -4,12 +4,14 @@ import {
   fetchLeagueStandings,
   fetchManagerHistory,
   fetchManagerTransfers,
+  fetchManagerGameweekPicks,
 } from "./client";
 import type {
   FPLBootstrapStatic,
   FPLLeagueStandings,
   FPLManagerHistory,
   FPLManagerTransfers,
+  FPLGameweekPicks,
 } from "./types";
 
 // Mock global fetch
@@ -341,6 +343,102 @@ describe("FPL API Client", () => {
 
       expect(result).toEqual([]);
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("fetchManagerGameweekPicks", () => {
+    it("should fetch and return manager gameweek picks", async () => {
+      const mockData: FPLGameweekPicks = {
+        active_chip: null,
+        automatic_subs: [],
+        entry_history: {
+          event: 1,
+          points: 92,
+          total_points: 92,
+          rank: 1,
+          rank_sort: 1,
+          overall_rank: 125000,
+          bank: 0,
+          value: 1000,
+          event_transfers: 0,
+          event_transfers_cost: 0,
+          points_on_bench: 12,
+        },
+        picks: [
+          {
+            element: 234,
+            position: 1,
+            multiplier: 1,
+            is_captain: false,
+            is_vice_captain: false,
+          },
+          {
+            element: 345,
+            position: 2,
+            multiplier: 2,
+            is_captain: true,
+            is_vice_captain: false,
+          },
+        ],
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerGameweekPicks("789012", 1);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://fantasy.premierleague.com/api/entry/789012/event/1/picks/"
+      );
+      expect(result).toEqual(mockData);
+      expect(result.picks).toHaveLength(2);
+      expect(result.picks[1].is_captain).toBe(true);
+      expect(result.entry_history.points).toBe(92);
+    });
+
+    it("should throw error for invalid manager ID or gameweek", async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+      });
+
+      await expect(fetchManagerGameweekPicks("9999999", 1)).rejects.toThrow(
+        "Failed to fetch manager picks: 404 Not Found"
+      );
+    });
+
+    it("should handle active chip in picks data", async () => {
+      const mockData: FPLGameweekPicks = {
+        active_chip: "3xc",
+        automatic_subs: [],
+        entry_history: {
+          event: 5,
+          points: 134,
+          total_points: 456,
+          rank: 1,
+          rank_sort: 1,
+          overall_rank: 50000,
+          bank: 5,
+          value: 1020,
+          event_transfers: 0,
+          event_transfers_cost: 0,
+          points_on_bench: 0,
+        },
+        picks: [],
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerGameweekPicks("789012", 5);
+
+      expect(result.active_chip).toBe("3xc");
+      expect(result.entry_history.event).toBe(5);
     });
   });
 });

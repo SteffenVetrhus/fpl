@@ -1,11 +1,18 @@
 import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
+import type { CaptainRegretData } from "~/utils/captain-regret";
+import { CaptainRegretBadge } from "~/components/CaptainRegretBadge/CaptainRegretBadge";
 
 interface GameweekCardProps {
   gameweek: FPLManagerGameweek;
   isWinner: boolean;
+  captainRegret?: CaptainRegretData;
 }
 
-export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
+export function GameweekCard({
+  gameweek,
+  isWinner,
+  captainRegret,
+}: GameweekCardProps) {
   const getRankEmoji = (rank: number) => {
     // Rank emojis based on overall league position, not gameweek winner
     if (rank === 2) return "🥈";
@@ -88,6 +95,9 @@ export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
             ` (-${gameweek.event_transfers_cost} pts)`}
         </div>
       )}
+
+      {/* Captain Regret */}
+      {captainRegret && <CaptainRegretBadge regretData={captainRegret} />}
     </div>
   );
 }

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link, useSearchParams, useNavigate } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { GameweekNavigator } from "~/components/GameweekNavigator/GameweekNavigator";
@@ -31,6 +30,8 @@ export async function loader() {
 
 export default function Standings({ loaderData }: Route.ComponentProps) {
   const { managers } = useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Get available gameweeks and default to most recent
   const availableGameweeks = getAvailableGameweeks(managers);
@@ -39,11 +40,20 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
       ? availableGameweeks[availableGameweeks.length - 1]
       : 1;
 
-  const [currentGameweek, setCurrentGameweek] = useState(mostRecentGameweek);
+  // Get current gameweek from URL or default to most recent
+  const gwParam = searchParams.get("gw");
+  const currentGameweek = gwParam
+    ? parseInt(gwParam, 10)
+    : mostRecentGameweek;
+
+  // Validate gameweek is in available range
+  const validGameweek = availableGameweeks.includes(currentGameweek)
+    ? currentGameweek
+    : mostRecentGameweek;
 
   // Calculate standings for current gameweek
   const handleNavigate = (gameweek: number) => {
-    setCurrentGameweek(gameweek);
+    navigate(`/standings?gw=${gameweek}`);
   };
 
   // Show empty state if no managers
@@ -72,7 +82,7 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
     );
   }
 
-  const standingsData = calculateHistoricalStandings(managers, currentGameweek);
+  const standingsData = calculateHistoricalStandings(managers, validGameweek);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -83,7 +93,7 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
             Historical Standings
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            League standings across all gameweeks
+            League standings across all gameweeks • Share this link: /standings?gw={validGameweek}
           </p>
         </div>
       </header>
@@ -124,7 +134,7 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Gameweek Navigator */}
         <GameweekNavigator
-          currentGameweek={currentGameweek}
+          currentGameweek={validGameweek}
           availableGameweeks={availableGameweeks}
           onNavigate={handleNavigate}
         />

@@ -356,6 +356,60 @@ describe("Standings Route", () => {
     expect(nextButton).toBeDisabled();
   });
 
+  it("should respect URL gameweek parameter", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/standings",
+          Component: Standings,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/standings?gw=2"] }
+    );
+
+    render(<RouteStub initialEntries={["/standings?gw=2"]} />);
+
+    // Should show gameweek 2 based on URL param
+    expect(
+      await screen.findByText(/Gameweek 2/i, {}, { timeout: 3000 })
+    ).toBeInTheDocument();
+
+    // Should show GW2 winner (Alice with 72 points)
+    const stars = screen.getAllByText("⭐");
+    expect(stars.length).toBeGreaterThan(0);
+  });
+
+  it("should handle invalid URL gameweek parameter", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/standings",
+          Component: Standings,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/standings?gw=999"] }
+    );
+
+    render(<RouteStub initialEntries={["/standings?gw=999"]} />);
+
+    // Should fallback to most recent gameweek when invalid gw is provided
+    expect(
+      await screen.findByText(/Gameweek 3/i, {}, { timeout: 3000 })
+    ).toBeInTheDocument();
+  });
+
   it("should handle empty gameweeks gracefully", async () => {
     const RouteStub = createRoutesStub(
       [
