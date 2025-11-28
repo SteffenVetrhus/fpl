@@ -203,10 +203,10 @@ describe("calculateHistoricalStandings", () => {
   it("should return total points at that gameweek", () => {
     const result = calculateHistoricalStandings(mockManagers, 3);
 
-    // At GW3, standings by total_points
-    expect(result.standings[0].totalPoints).toBe(217); // Bob
-    expect(result.standings[1].totalPoints).toBe(216); // Charlie
-    expect(result.standings[2].totalPoints).toBe(215); // Alice
+    // At GW3, standings sorted by rank (not total_points)
+    expect(result.standings[0].totalPoints).toBe(217); // Bob (rank 1)
+    expect(result.standings[1].totalPoints).toBe(215); // Alice (rank 2)
+    expect(result.standings[2].totalPoints).toBe(216); // Charlie (rank 3)
   });
 
   it("should throw error if gameweek doesn't exist", () => {
