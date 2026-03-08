@@ -127,6 +127,10 @@ html, body {
     right: 1rem;
     transform: none;
   }
+
+  body {
+    padding-bottom: 5rem;
+  }
 }
 
 /* Decorative geometric stripe */
