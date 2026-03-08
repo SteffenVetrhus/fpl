@@ -396,6 +396,187 @@ export interface FPLGameweekPicks {
 }
 
 // ============================================================================
+// Fixtures Response
+// ============================================================================
+
+/**
+ * Premier League fixture
+ */
+export interface FPLFixture {
+  id: number;
+  code: number;
+  event: number | null; // Gameweek number (null if unscheduled)
+  finished: boolean;
+  finished_provisional: boolean;
+  kickoff_time: string | null;
+  minutes: number;
+  provisional_start_time: boolean;
+  started: boolean;
+  team_a: number; // Away team ID
+  team_a_score: number | null;
+  team_h: number; // Home team ID
+  team_h_score: number | null;
+  team_h_difficulty: number; // FDR 1-5
+  team_a_difficulty: number; // FDR 1-5
+  pulse_id: number;
+}
+
+// ============================================================================
+// Element Summary Response (Player Detail)
+// ============================================================================
+
+/**
+ * Player's upcoming fixture
+ */
+export interface FPLPlayerFixture {
+  id: number;
+  code: number;
+  team_h: number;
+  team_h_score: number | null;
+  team_a: number;
+  team_a_score: number | null;
+  event: number;
+  finished: boolean;
+  minutes: number;
+  provisional_start_time: boolean;
+  kickoff_time: string;
+  event_name: string;
+  is_home: boolean;
+  difficulty: number;
+}
+
+/**
+ * Player's past gameweek performance
+ */
+export interface FPLPlayerHistory {
+  element: number;
+  fixture: number;
+  opponent_team: number;
+  total_points: number;
+  was_home: boolean;
+  kickoff_time: string;
+  team_h_score: number;
+  team_a_score: number;
+  round: number;
+  minutes: number;
+  goals_scored: number;
+  assists: number;
+  clean_sheets: number;
+  goals_conceded: number;
+  own_goals: number;
+  penalties_saved: number;
+  penalties_missed: number;
+  yellow_cards: number;
+  red_cards: number;
+  saves: number;
+  bonus: number;
+  bps: number;
+  influence: string;
+  creativity: string;
+  threat: string;
+  ict_index: string;
+  starts: number;
+  expected_goals: string;
+  expected_assists: string;
+  expected_goal_involvements: string;
+  expected_goals_conceded: string;
+  value: number;
+  transfers_balance: number;
+  selected: number;
+  transfers_in: number;
+  transfers_out: number;
+}
+
+/**
+ * Complete Element Summary response
+ */
+export interface FPLElementSummary {
+  fixtures: FPLPlayerFixture[];
+  history: FPLPlayerHistory[];
+  history_past: Array<{
+    season_name: string;
+    element_code: number;
+    start_cost: number;
+    end_cost: number;
+    total_points: number;
+    minutes: number;
+    goals_scored: number;
+    assists: number;
+    clean_sheets: number;
+    goals_conceded: number;
+    own_goals: number;
+    penalties_saved: number;
+    penalties_missed: number;
+    yellow_cards: number;
+    red_cards: number;
+    saves: number;
+    bonus: number;
+    bps: number;
+    influence: string;
+    creativity: string;
+    threat: string;
+    ict_index: string;
+    starts: number;
+    expected_goals: string;
+    expected_assists: string;
+    expected_goal_involvements: string;
+    expected_goals_conceded: string;
+  }>;
+}
+
+// ============================================================================
+// Live Gameweek Response
+// ============================================================================
+
+/**
+ * Live player stats for a gameweek
+ */
+export interface FPLLiveElement {
+  id: number;
+  stats: {
+    minutes: number;
+    goals_scored: number;
+    assists: number;
+    clean_sheets: number;
+    goals_conceded: number;
+    own_goals: number;
+    penalties_saved: number;
+    penalties_missed: number;
+    yellow_cards: number;
+    red_cards: number;
+    saves: number;
+    bonus: number;
+    bps: number;
+    influence: string;
+    creativity: string;
+    threat: string;
+    ict_index: string;
+    starts: number;
+    expected_goals: string;
+    expected_assists: string;
+    expected_goal_involvements: string;
+    expected_goals_conceded: string;
+    total_points: number;
+    in_dreamteam: boolean;
+  };
+  explain: Array<{
+    fixture: number;
+    stats: Array<{
+      identifier: string;
+      points: number;
+      value: number;
+    }>;
+  }>;
+}
+
+/**
+ * Complete Live Gameweek response
+ */
+export interface FPLLiveGameweek {
+  elements: FPLLiveElement[];
+}
+
+// ============================================================================
 // Helper Types for Application Logic
 // ============================================================================
 
