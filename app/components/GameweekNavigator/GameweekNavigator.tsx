@@ -33,28 +33,32 @@ export function GameweekNavigator({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 mb-6">
+    <div className="kit-card p-5 kit-animate-slide-up" style={{ "--delay": "200ms" } as React.CSSProperties}>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Previous Button */}
         <button
           onClick={handlePrevious}
           disabled={isFirstGameweek}
           aria-label="Previous gameweek"
-          className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full sm:w-auto"
+          className="px-5 py-2.5 rounded-full font-semibold text-sm transition-colors w-full sm:w-auto disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            background: isFirstGameweek ? "#e5e7eb" : "var(--color-page-standings, #059669)",
+            color: isFirstGameweek ? "#9ca3af" : "white",
+          }}
         >
           ◄ Previous
         </button>
 
         {/* Current Gameweek Display & Dropdown */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 w-full sm:w-auto">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+        <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 w-full sm:w-auto">
+          <h2 className="whitespace-nowrap" style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", color: "#1a1a1a" }}>
             Gameweek {currentGameweek}
           </h2>
 
           <select
             value={currentGameweek}
             onChange={handleSelectChange}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+            className="px-4 py-2 border border-gray-200 rounded-full bg-white text-gray-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full sm:w-auto"
           >
             {availableGameweeks.length === 0 ? (
               <option value={currentGameweek}>GW {currentGameweek}</option>
@@ -73,7 +77,11 @@ export function GameweekNavigator({
           onClick={handleNext}
           disabled={isLastGameweek}
           aria-label="Next gameweek"
-          className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full sm:w-auto"
+          className="px-5 py-2.5 rounded-full font-semibold text-sm transition-colors w-full sm:w-auto disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            background: isLastGameweek ? "#e5e7eb" : "var(--color-page-standings, #059669)",
+            color: isLastGameweek ? "#9ca3af" : "white",
+          }}
         >
           Next ►
         </button>

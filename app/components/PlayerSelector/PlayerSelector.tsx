@@ -22,7 +22,7 @@ export function PlayerSelector({
     <div className="mb-6">
       <label
         htmlFor="player-selector"
-        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"
       >
         Select Player ({managers.length} players)
       </label>
@@ -30,7 +30,7 @@ export function PlayerSelector({
         id="player-selector"
         value={selectedManager}
         onChange={handleChange}
-        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-full bg-white text-gray-900 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       >
         {managers.length === 0 ? (
           <option value="">No players available</option>

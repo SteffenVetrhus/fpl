@@ -1,4 +1,4 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerTransfers } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { TransferTracker } from "~/components/TransferTracker/TransferTracker";
@@ -8,7 +8,6 @@ export async function loader() {
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
-  // Fetch transfer data for each manager
   const transferData = await Promise.all(
     leagueData.standings.results.map(async (manager) => {
       const transfers = await fetchManagerTransfers(manager.entry.toString());
@@ -20,7 +19,6 @@ export async function loader() {
     })
   );
 
-  // Calculate transfer summary
   const transferSummary = transferData.map(({ managerName, teamName, transfers }) => {
     const transferCount = transfers.length;
     const lastTransferGW = transfers.length > 0
@@ -41,54 +39,26 @@ export async function loader() {
 export default function Transfers({ loaderData }: Route.ComponentProps) {
   const { transferSummary } = useLoaderData<typeof loader>();
 
+  const totalTransfers = transferSummary.reduce((sum, t) => sum + t.transferCount, 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Transfer Activity
-          </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+    <div className="min-h-screen" style={{ background: "var(--color-page-transfers)" }}>
+      {/* Hero Section */}
+      <section className="kit-hero kit-diagonal-cut" style={{ background: "var(--color-page-transfers)" }}>
+        <div className="kit-watermark">{totalTransfers}</div>
+        <div className="kit-stripe" style={{ background: "var(--color-page-transfers-light)" }} />
+        <div className="relative z-10 max-w-7xl mx-auto w-full">
+          <p className="text-white/60 text-sm uppercase tracking-[0.2em] font-medium mb-3 kit-animate-slide-up">
             Who's been busy in the transfer market?
           </p>
+          <h1 className="kit-headline text-white text-5xl md:text-7xl lg:text-8xl kit-animate-slide-up" style={{ "--delay": "100ms" } as React.CSSProperties}>
+            Transfer Market
+          </h1>
         </div>
-      </header>
+      </section>
 
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <Link
-              to="/"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              League Table
-            </Link>
-            <Link
-              to="/gameweeks"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              Gameweek History
-            </Link>
-            <Link
-              to="/standings"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              Historical Standings
-            </Link>
-            <Link
-              to="/transfers"
-              className="border-b-2 border-blue-500 py-4 px-1 text-sm font-medium text-blue-600 dark:text-blue-400"
-            >
-              Transfer Activity
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Content */}
+      <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-24 sm:pb-16">
         <TransferTracker transfers={transferSummary} />
       </main>
     </div>

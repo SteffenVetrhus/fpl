@@ -13,9 +13,9 @@ interface TransferListProps {
 export function TransferList({ transfers }: TransferListProps) {
   if (transfers.length === 0) {
     return (
-      <div className="text-center py-12 px-4">
-        <p className="text-xl text-gray-500 dark:text-gray-400">
-          🦗 Crickets... Nobody's made any transfers yet! Set and forget? 📊
+      <div className="kit-card p-12 text-center">
+        <p className="text-xl text-gray-400">
+          Crickets... Nobody's made any transfers yet! Set and forget?
         </p>
       </div>
     );
@@ -40,14 +40,14 @@ export function TransferList({ transfers }: TransferListProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-        📝 Transfer List
+      <h2 className="kit-headline text-xl text-gray-900 mb-4">
+        Transfer List
       </h2>
 
       {sortedGameweeks.map((gameweek) => (
         <div key={gameweek} className="space-y-3">
           {/* Gameweek Header */}
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b-2 border-gray-300 dark:border-gray-600 pb-2">
+          <h3 className="kit-headline text-lg text-gray-700 border-b-2 border-gray-200 pb-2">
             {gameweek}
           </h3>
 
@@ -56,36 +56,36 @@ export function TransferList({ transfers }: TransferListProps) {
             {groupedByGameweek[gameweek].map((transfer, idx) => (
               <div
                 key={`${gameweek}-${transfer.managerName}-${idx}`}
-                className={`rounded-lg border p-4 ${
+                className={`rounded-xl border p-4 ${
                   transfer.cost > 0
-                    ? "border-red-300 bg-red-50 dark:bg-red-900/10 dark:border-red-700"
-                    : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-200 bg-white"
                 }`}
               >
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   {/* Manager Name */}
-                  <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[120px]">
+                  <div className="font-semibold text-gray-900 min-w-[120px]">
                     {transfer.managerName}
                   </div>
 
                   {/* Transfer Details */}
                   <div className="flex items-center gap-3 flex-1 justify-center">
                     <div className="text-right">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="kit-stat-label text-gray-400">
                         Out
                       </div>
-                      <div className="font-medium text-red-600 dark:text-red-400">
+                      <div className="font-medium text-red-600">
                         {transfer.playerOut}
                       </div>
                     </div>
 
-                    <div className="text-2xl text-gray-400">→</div>
+                    <div className="text-2xl text-gray-300" style={{ fontFamily: "var(--font-display)" }}>→</div>
 
                     <div className="text-left">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="kit-stat-label text-gray-400">
                         In
                       </div>
-                      <div className="font-medium text-green-600 dark:text-green-400">
+                      <div className="font-medium text-green-600">
                         {transfer.playerIn}
                       </div>
                     </div>
@@ -94,10 +94,10 @@ export function TransferList({ transfers }: TransferListProps) {
                   {/* Cost */}
                   {transfer.cost > 0 && (
                     <div className="min-w-[60px] text-right">
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                      <div className="kit-stat-label text-gray-400">
                         Hit
                       </div>
-                      <div className="font-bold text-red-600 dark:text-red-400">
+                      <div className="font-bold text-red-600" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>
                         -{transfer.cost}
                       </div>
                     </div>
@@ -110,13 +110,13 @@ export function TransferList({ transfers }: TransferListProps) {
       ))}
 
       {/* Summary Footer */}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          🔢 Total transfers: <strong>{transfers.length}</strong> •{" "}
-          <strong>
+      <div className="mt-6 p-4 rounded-xl text-center text-white" style={{ background: "var(--color-page-transfers, #EA580C)" }}>
+        <p className="text-sm font-medium">
+          Total transfers: <strong style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>{transfers.length}</strong> ·{" "}
+          <strong style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>
             {transfers.filter((t) => t.cost > 0).length}
           </strong>{" "}
-          with point hits 💥
+          with point hits
         </p>
       </div>
     </div>

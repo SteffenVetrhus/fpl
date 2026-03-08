@@ -95,7 +95,7 @@ describe("Home Route (_index)", () => {
     ).toBeInTheDocument();
   });
 
-  it("should show navigation links", async () => {
+  it("should show page content elements", async () => {
     const RouteStub = createRoutesStub([
       {
         path: "/",
@@ -109,9 +109,9 @@ describe("Home Route (_index)", () => {
     // Wait for component to render
     await screen.findAllByText("Alice Johnson", {}, { timeout: 3000 });
 
-    // Should have navigation
-    expect(screen.getByText(/gameweek/i)).toBeInTheDocument();
-    expect(screen.getByText(/transfer/i)).toBeInTheDocument();
+    // Should have FPL tracker subtitle and footer
+    expect(screen.getByText(/Fantasy Premier League Tracker/i)).toBeInTheDocument();
+    expect(screen.getByText(/FPL API/i)).toBeInTheDocument();
   });
 
   it("loader should fetch league standings", async () => {

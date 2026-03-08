@@ -93,7 +93,7 @@ describe("PlayerSelector", () => {
     expect(options[0]).toHaveTextContent("No players available");
   });
 
-  it("should apply proper styling for light and dark modes", () => {
+  it("should apply proper styling classes", () => {
     const onSelect = vi.fn();
     const { container } = render(
       <PlayerSelector
@@ -104,8 +104,8 @@ describe("PlayerSelector", () => {
     );
 
     const select = screen.getByRole("combobox");
-    // Check for dark mode classes
-    expect(select.className).toMatch(/dark:/);
+    // Check for Kit Day rounded-full styling
+    expect(select.className).toMatch(/rounded-full/);
   });
 
   it("should show manager count in label", () => {
