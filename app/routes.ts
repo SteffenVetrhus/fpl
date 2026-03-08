@@ -15,4 +15,5 @@ export default [
   route("head-to-head", "routes/head-to-head.tsx"),
   route("banter-bot", "routes/banter-bot.tsx"),
   route("records", "routes/records.tsx"),
+  route("roast-news", "routes/roast-news.tsx"),
 ] satisfies RouteConfig;
