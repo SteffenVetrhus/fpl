@@ -292,15 +292,15 @@ export default function Records({ loaderData }: Route.ComponentProps) {
             {achievements.map((record, index) => (
               <div key={record.title} className="p-5 kit-table-row">
                 <div className="flex items-center gap-4">
-                  <div className="text-3xl">{record.emoji}</div>
+                  <div className="text-3xl shrink-0">{record.emoji}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-900">{record.title}</div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="kit-badge bg-amber-100 text-amber-700">{record.holder}</span>
                       <span className="text-xs text-gray-400">{record.detail}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0 pl-2">
                     <div className="text-amber-600" style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", lineHeight: 1 }}>
                       {record.value}
                     </div>
@@ -320,15 +320,15 @@ export default function Records({ loaderData }: Route.ComponentProps) {
             {shameRecords.map((record, index) => (
               <div key={record.title} className="p-5 kit-table-row">
                 <div className="flex items-center gap-4">
-                  <div className="text-3xl">{record.emoji}</div>
+                  <div className="text-3xl shrink-0">{record.emoji}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-900">{record.title}</div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="kit-badge bg-red-100 text-red-700">{record.holder}</span>
                       <span className="text-xs text-gray-400">{record.detail}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0 pl-2">
                     <div className="text-red-600" style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", lineHeight: 1 }}>
                       {record.value}
                     </div>
