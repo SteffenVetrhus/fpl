@@ -77,7 +77,33 @@ describe("Gameweeks Route", () => {
     chips: [],
   };
 
-  it("should render gameweek history", async () => {
+  it("should show victories table by default", async () => {
+    const RouteStub = createRoutesStub(
+      [
+        {
+          path: "/gameweeks",
+          Component: Gameweeks,
+          loader: () => ({
+            managers: [
+              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
+              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
+            ],
+          }),
+        },
+      ],
+      { initialEntries: ["/gameweeks"] }
+    );
+
+    render(<RouteStub initialEntries={["/gameweeks"]} />);
+
+    expect(
+      await screen.findByText("Gameweek Victories", {}, { timeout: 3000 })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
+    expect(screen.getByText("Bob Smith")).toBeInTheDocument();
+  });
+
+  it("should render gameweek history when player is selected", async () => {
     const RouteStub = createRoutesStub(
       [
         {
@@ -86,19 +112,18 @@ describe("Gameweeks Route", () => {
           loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
         },
       ],
-      { initialEntries: ["/gameweeks"] }
+      { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
     );
 
-    render(<RouteStub initialEntries={["/gameweeks"]} />);
+    render(<RouteStub initialEntries={["/gameweeks?player=Alice+Johnson"]} />);
 
-    // Should show gameweeks
     expect(
       await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 })
     ).toBeInTheDocument();
     expect(screen.getAllByText(/Gameweek 2/i).length).toBeGreaterThan(0);
   });
 
-  it("should display manager name", async () => {
+  it("should display manager name and team in player view", async () => {
     const RouteStub = createRoutesStub(
       [
         {
@@ -107,18 +132,17 @@ describe("Gameweeks Route", () => {
           loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
         },
       ],
-      { initialEntries: ["/gameweeks"] }
+      { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
     );
 
-    render(<RouteStub initialEntries={["/gameweeks"]} />);
+    render(<RouteStub initialEntries={["/gameweeks?player=Alice+Johnson"]} />);
 
     const aliceElements = await screen.findAllByText("Alice Johnson", {}, { timeout: 3000 });
-    // Should show name in player selector dropdown and in the header
     expect(aliceElements.length).toBeGreaterThan(0);
     expect(screen.getByText("Alice's Aces")).toBeInTheDocument();
   });
 
-  it("should show navigation back to home", async () => {
+  it("should show back button in player view", async () => {
     const RouteStub = createRoutesStub(
       [
         {
@@ -127,14 +151,14 @@ describe("Gameweeks Route", () => {
           loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
         },
       ],
-      { initialEntries: ["/gameweeks"] }
+      { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
     );
 
-    render(<RouteStub initialEntries={["/gameweeks"]} />);
+    render(<RouteStub initialEntries={["/gameweeks?player=Alice+Johnson"]} />);
 
-    await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
-
-    // Navigation is now in the shared root layout; verify page-specific content
+    expect(
+      await screen.findByText("All players", {}, { timeout: 3000 })
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Gameweek History/i).length).toBeGreaterThan(0);
   });
 
@@ -154,7 +178,7 @@ describe("Gameweeks Route", () => {
     expect(result.managers[0].name).toBe("Alice Johnson");
   });
 
-  it("should show player selector dropdown", async () => {
+  it("should show player selector in player view", async () => {
     const RouteStub = createRoutesStub(
       [
         {
@@ -168,44 +192,13 @@ describe("Gameweeks Route", () => {
           }),
         },
       ],
-      { initialEntries: ["/gameweeks"] }
+      { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
     );
 
-    render(<RouteStub initialEntries={["/gameweeks"]} />);
+    render(<RouteStub initialEntries={["/gameweeks?player=Alice+Johnson"]} />);
 
-    // Should show player selector
     expect(await screen.findByRole("combobox", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText(/select player/i)).toBeInTheDocument();
-  });
-
-  it("should show only the selected player's gameweeks", async () => {
-    const RouteStub = createRoutesStub(
-      [
-        {
-          path: "/gameweeks",
-          Component: Gameweeks,
-          loader: () => ({
-            managers: [
-              { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
-              { name: "Bob Smith", teamName: "Bob's Best", gameweeks: [] },
-            ],
-          }),
-        },
-      ],
-      { initialEntries: ["/gameweeks"] }
-    );
-
-    render(<RouteStub initialEntries={["/gameweeks"]} />);
-
-    // Should show Alice's name (first player by default)
-    await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
-
-    // Should show Alice's gameweeks
-    const aliceHeaders = screen.getAllByText("Alice Johnson");
-    expect(aliceHeaders.length).toBeGreaterThan(0);
-
-    // Should NOT show Bob's name as a header (he's not selected)
-    expect(screen.queryByText("Bob's Best")).not.toBeInTheDocument();
   });
 
   it("should respect URL player parameter", async () => {
@@ -227,7 +220,6 @@ describe("Gameweeks Route", () => {
 
     render(<RouteStub initialEntries={["/gameweeks?player=Bob+Smith"]} />);
 
-    // Should show Bob's gameweeks based on URL param
     await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
 
     const select = screen.getByRole("combobox") as HTMLSelectElement;
