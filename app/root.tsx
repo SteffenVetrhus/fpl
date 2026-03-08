@@ -97,7 +97,7 @@ function HamburgerMenu() {
         <>
           <div className="kit-menu-overlay" onClick={handleClose} />
           <div className={`kit-menu-panel ${isClosing ? "closing" : ""}`}>
-            <div className="h-full bg-gray-950 text-white">
+            <div className="min-h-full bg-gray-950 text-white">
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-white/10">
                 <h2 className="kit-headline text-xl tracking-wide">FPL Tracker</h2>
