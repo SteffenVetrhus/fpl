@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -6,9 +7,27 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
-import { Trophy, CalendarDays, BarChart3, ArrowLeftRight } from "lucide-react";
+import {
+  Trophy,
+  CalendarDays,
+  BarChart3,
+  ArrowLeftRight,
+  Menu,
+  X,
+  Armchair,
+  Crown,
+  Drama,
+  Activity,
+  Wallet,
+  Globe,
+  Sparkles,
+  Swords,
+  Bot,
+  BookOpen,
+} from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -25,37 +44,132 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
-function FloatingNav() {
-  const navItems = [
-    { to: "/", label: "Table", icon: Trophy, end: true },
-    { to: "/gameweeks", label: "Gameweeks", icon: CalendarDays, end: false },
-    { to: "/standings", label: "Standings", icon: BarChart3, end: false },
-    { to: "/transfers", label: "Transfers", icon: ArrowLeftRight, end: false },
-  ];
+const coreNavItems = [
+  { to: "/", label: "League Table", icon: Trophy, end: true, color: "#4A1D96" },
+  { to: "/gameweeks", label: "Gameweeks", icon: CalendarDays, end: false, color: "#1D4ED8" },
+  { to: "/standings", label: "Standings", icon: BarChart3, end: false, color: "#059669" },
+  { to: "/transfers", label: "Transfers", icon: ArrowLeftRight, end: false, color: "#EA580C" },
+];
+
+const banterNavItems = [
+  { to: "/bench-shame", label: "Bench Warmers", icon: Armchair, end: false, color: "#B91C1C" },
+  { to: "/captain-hindsight", label: "Captain Hindsight", icon: Crown, end: false, color: "#7C3AED" },
+  { to: "/transfer-clowns", label: "Transfer Clowns", icon: Drama, end: false, color: "#D97706" },
+  { to: "/mood-swings", label: "Mood Swings", icon: Activity, end: false, color: "#0891B2" },
+  { to: "/rich-list", label: "Rich List", icon: Wallet, end: false, color: "#15803D" },
+  { to: "/league-vs-world", label: "League vs World", icon: Globe, end: false, color: "#1E40AF" },
+  { to: "/chip-roast", label: "Chip Roast", icon: Sparkles, end: false, color: "#9333EA" },
+  { to: "/head-to-head", label: "Head to Head", icon: Swords, end: false, color: "#BE123C" },
+  { to: "/banter-bot", label: "Banter Bot", icon: Bot, end: false, color: "#0F766E" },
+  { to: "/records", label: "History Books", icon: BookOpen, end: false, color: "#C2410C" },
+];
+
+function HamburgerMenu() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const location = useLocation();
+
+  // Close menu on navigation
+  useEffect(() => {
+    setIsOpen(false);
+    setIsClosing(false);
+  }, [location.pathname]);
+
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 200);
+  }, []);
 
   return (
-    <nav className="kit-floating-nav">
-      <div className="flex gap-1 sm:gap-1 max-sm:justify-around max-sm:w-full">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            viewTransition
-            className={({ isActive }) =>
-              `rounded-full px-3 py-2 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 max-sm:flex-1 ${
-                isActive
-                  ? "bg-white/20 text-white"
-                  : "text-white/60 hover:text-white"
-              }`
-            }
-          >
-            <item.icon size={18} />
-            <span className="hidden sm:inline">{item.label}</span>
-          </NavLink>
-        ))}
-      </div>
-    </nav>
+    <>
+      <button
+        className="kit-hamburger-btn"
+        onClick={() => setIsOpen(true)}
+        aria-label="Open menu"
+      >
+        <Menu size={22} color="white" />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="kit-menu-overlay" onClick={handleClose} />
+          <div className={`kit-menu-panel ${isClosing ? "closing" : ""}`}>
+            <div className="h-full bg-gray-950 text-white">
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-white/10">
+                <h2 className="kit-headline text-xl tracking-wide">FPL Tracker</h2>
+                <button
+                  onClick={handleClose}
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Core navigation */}
+              <div className="p-4">
+                <p className="kit-stat-label text-white/40 mb-2 px-3">Core</p>
+                {coreNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    viewTransition
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all mb-1 ${
+                        isActive
+                          ? "bg-white/15 text-white"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`
+                    }
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: item.color }}
+                    >
+                      <item.icon size={16} color="white" />
+                    </div>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+
+              {/* Banter zone */}
+              <div className="p-4 border-t border-white/10">
+                <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
+                {banterNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    viewTransition
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                        isActive
+                          ? "bg-white/15 text-white"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`
+                    }
+                  >
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center"
+                      style={{ background: item.color }}
+                    >
+                      <item.icon size={14} color="white" />
+                    </div>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -69,7 +183,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <FloatingNav />
+        <HamburgerMenu />
         {children}
         <ScrollRestoration />
         <Scripts />
