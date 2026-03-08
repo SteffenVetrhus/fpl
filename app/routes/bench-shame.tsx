@@ -153,14 +153,14 @@ export default function BenchShame({ loaderData }: Route.ComponentProps) {
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-gray-900">{manager.managerName}</span>
                     {index === 0 && (
                       <span className="kit-badge bg-red-100 text-red-700">Chief Bench Warmer</span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-400 italic">{manager.teamName}</div>
-                  <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                  <div className="text-xs text-gray-400 italic truncate">{manager.teamName}</div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
                     <span>Worst GW: <strong className="text-red-600">{manager.worstBenchGW.points}pts</strong> (GW{manager.worstBenchGW.gameweek})</span>
                     <span className="hidden sm:inline">Avg: <strong>{manager.avgBenchPoints.toFixed(1)}</strong>/wk</span>
                     {manager.couldHaveWonGWs > 0 && (
@@ -170,8 +170,8 @@ export default function BenchShame({ loaderData }: Route.ComponentProps) {
                     )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-red-600" style={{ fontFamily: "var(--font-display)", fontSize: "2rem", lineHeight: 1 }}>
+                <div className="text-right shrink-0">
+                  <div className="text-red-600" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.5rem, 5vw, 2rem)", lineHeight: 1 }}>
                     {manager.totalBenchPoints}
                   </div>
                   <div className="kit-stat-label text-gray-400">wasted pts</div>
