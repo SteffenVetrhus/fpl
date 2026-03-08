@@ -35,7 +35,7 @@ function FloatingNav() {
 
   return (
     <nav className="kit-floating-nav">
-      <div className="flex gap-1">
+      <div className="flex gap-1 sm:gap-1 max-sm:justify-around max-sm:w-full">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -43,7 +43,7 @@ function FloatingNav() {
             end={item.end}
             viewTransition
             className={({ isActive }) =>
-              `rounded-full px-3 py-2 text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+              `rounded-full px-3 py-2 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 max-sm:flex-1 ${
                 isActive
                   ? "bg-white/20 text-white"
                   : "text-white/60 hover:text-white"
