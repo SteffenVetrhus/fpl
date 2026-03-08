@@ -2,6 +2,7 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
+  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
@@ -19,9 +20,42 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap",
   },
 ];
+
+function FloatingNav() {
+  const navItems = [
+    { to: "/", label: "Table", end: true },
+    { to: "/gameweeks", label: "Gameweeks", end: false },
+    { to: "/standings", label: "Standings", end: false },
+    { to: "/transfers", label: "Transfers", end: false },
+  ];
+
+  return (
+    <nav className="kit-floating-nav">
+      <div className="flex gap-1">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            viewTransition
+            className={({ isActive }) =>
+              `rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                isActive
+                  ? "bg-white/20 text-white"
+                  : "text-white/60 hover:text-white"
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
+  );
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -33,6 +67,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <FloatingNav />
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -62,14 +97,16 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="min-h-screen flex items-center justify-center" style={{ background: '#4A1D96' }}>
+      <div className="text-center">
+        <h1 className="kit-headline text-white text-8xl mb-4">{message}</h1>
+        <p className="text-white/70 text-lg max-w-md">{details}</p>
+        {stack && (
+          <pre className="mt-8 p-4 bg-black/30 rounded-lg text-white/60 text-xs text-left overflow-x-auto max-w-2xl">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </div>
     </main>
   );
 }

@@ -304,7 +304,8 @@ describe("Standings Route", () => {
 
     await screen.findByText(/Gameweek 3/i, {}, { timeout: 3000 });
 
-    expect(screen.getByText(/League Table/i)).toBeInTheDocument();
+    // Navigation is now in the shared root layout; verify page-specific content
+    expect(screen.getByText(/Historical Standings/i)).toBeInTheDocument();
   });
 
   it("loader should fetch manager histories", async () => {

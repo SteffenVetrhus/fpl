@@ -134,7 +134,8 @@ describe("Gameweeks Route", () => {
 
     await screen.findByText(/Gameweek 1/i, {}, { timeout: 3000 });
 
-    expect(screen.getByText(/League Table/i)).toBeInTheDocument();
+    // Navigation is now in the shared root layout; verify page-specific content
+    expect(screen.getAllByText(/Gameweek History/i).length).toBeGreaterThan(0);
   });
 
   it("loader should fetch manager histories", async () => {

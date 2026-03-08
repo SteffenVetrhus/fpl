@@ -7,9 +7,9 @@ interface HistoricalLeagueTableProps {
 export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
   if (data.standings.length === 0) {
     return (
-      <div className="text-center py-12 px-4">
-        <p className="text-xl text-gray-500 dark:text-gray-400">
-          📊 No data available for this gameweek
+      <div className="kit-card p-12 text-center">
+        <p className="text-xl text-gray-400">
+          No data available for this gameweek
         </p>
       </div>
     );
@@ -17,11 +17,11 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
 
   const getRankChangeIcon = (rankChange: number) => {
     if (rankChange > 0) {
-      return <span className="text-green-600 dark:text-green-400">↑</span>;
+      return <span className="text-green-600">↑</span>;
     } else if (rankChange < 0) {
-      return <span className="text-red-600 dark:text-red-400">↓</span>;
+      return <span className="text-red-600">↓</span>;
     }
-    return <span className="text-gray-400">-</span>;
+    return <span className="text-gray-300">-</span>;
   };
 
   const getRankChangeText = (rankChange: number) => {
@@ -35,10 +35,10 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
 
   const getRowClassName = (standing: typeof data.standings[0]) => {
     const baseClasses =
-      "border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+      "border-b border-gray-100 hover:bg-gray-50 transition-colors";
 
     if (standing.isGameweekWinner) {
-      return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-l-yellow-500`;
+      return `${baseClasses} bg-yellow-50 border-l-4 border-l-yellow-400`;
     }
 
     if (standing.rank === 1) {
@@ -58,32 +58,32 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
   return (
     <div className="space-y-6">
       {/* Statistics Panel */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          📊 Gameweek Statistics
+      <div className="kit-card p-5 kit-animate-slide-up" style={{ "--delay": "300ms" } as React.CSSProperties}>
+        <h3 className="kit-headline text-lg text-gray-900 mb-4">
+          Gameweek Statistics
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div className="bg-white dark:bg-gray-800 rounded p-3">
-            <div className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-xl p-4" style={{ background: "var(--color-page-standings, #059669)" }}>
+            <div className="kit-stat-label text-white/70">
               Average Points
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+            <div className="text-white mt-1" style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", lineHeight: 1 }}>
               {data.averagePoints.toFixed(1)}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded p-3">
-            <div className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
+          <div className="rounded-xl p-4" style={{ background: "var(--color-page-standings, #059669)" }}>
+            <div className="kit-stat-label text-white/70">
               Highest Points
             </div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+            <div className="text-white mt-1" style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", lineHeight: 1 }}>
               {data.highestPoints}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded p-3">
-            <div className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
+          <div className="rounded-xl p-4" style={{ background: "var(--color-page-standings, #059669)" }}>
+            <div className="kit-stat-label text-white/70">
               Lowest Points
             </div>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+            <div className="text-white mt-1" style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", lineHeight: 1 }}>
               {data.lowestPoints}
             </div>
           </div>
@@ -91,48 +91,62 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
       </div>
 
       {/* Standings Table */}
-      <div className="w-full overflow-x-auto rounded-lg shadow-lg">
-        <table className="w-full border-collapse bg-white dark:bg-gray-900">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800 text-left">
-              <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Rank
-              </th>
-              <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Manager
-              </th>
-              <th className="hidden lg:table-cell px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Team
-              </th>
-              <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
-                GW Pts
-              </th>
-              <th className="px-2 sm:px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
-                Total
-              </th>
-              <th className="hidden sm:table-cell px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 text-center">
-                Change
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.standings.map((standing, index) => (
-              <tr key={standing.managerName} className={getRowClassName(standing)}>
-                <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="font-bold text-gray-900 dark:text-gray-100">
-                      {standing.rank}
-                    </span>
-                    <span className="text-lg" role="img" aria-label="rank emoji">
-                      {getRankEmoji(standing.rank, index)}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm">
-                  {/* Mobile: stacked name + team */}
-                  <div className="lg:hidden">
-                    <div className="flex items-center gap-1">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
+      <div className="kit-card overflow-hidden kit-animate-slide-up" style={{ "--delay": "400ms" } as React.CSSProperties}>
+        <div className="w-full overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left" style={{ background: "var(--color-page-standings-dark, #065F46)" }}>
+                <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider">
+                  Rank
+                </th>
+                <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider">
+                  Manager
+                </th>
+                <th className="hidden lg:table-cell px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider">
+                  Team
+                </th>
+                <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-right">
+                  GW Pts
+                </th>
+                <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-right">
+                  Total
+                </th>
+                <th className="hidden sm:table-cell px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-center">
+                  Change
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.standings.map((standing, index) => (
+                <tr key={standing.managerName} className={getRowClassName(standing)}>
+                  <td className="px-3 sm:px-5 py-4 text-sm">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <span className="font-bold text-gray-900" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>
+                        {standing.rank}
+                      </span>
+                      <span className="text-lg" role="img" aria-label="rank emoji">
+                        {getRankEmoji(standing.rank, index)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-5 py-4 text-sm">
+                    <div className="lg:hidden">
+                      <div className="flex items-center gap-1">
+                        <div className="font-semibold text-gray-900">
+                          {standing.managerName}
+                        </div>
+                        {standing.isGameweekWinner && (
+                          <span className="text-yellow-500" aria-label="gameweek winner">
+                            ⭐
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 italic mt-0.5">
+                        {standing.teamName}
+                      </div>
+                    </div>
+                    <div className="hidden lg:flex items-center gap-1">
+                      <div className="font-semibold text-gray-900">
                         {standing.managerName}
                       </div>
                       {standing.isGameweekWinner && (
@@ -141,56 +155,41 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 italic mt-0.5">
+                  </td>
+                  <td className="hidden lg:table-cell px-5 py-4 text-sm">
+                    <div className="text-gray-400 italic">
                       {standing.teamName}
                     </div>
-                  </div>
-                  {/* Desktop: name only */}
-                  <div className="hidden lg:flex items-center gap-1">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                      {standing.managerName}
-                    </div>
-                    {standing.isGameweekWinner && (
-                      <span className="text-yellow-500" aria-label="gameweek winner">
-                        ⭐
-                      </span>
-                    )}
-                  </div>
-                </td>
-                {/* Desktop only: separate team column */}
-                <td className="hidden lg:table-cell px-4 py-4 text-sm">
-                  <div className="text-gray-600 dark:text-gray-400 italic">
-                    {standing.teamName}
-                  </div>
-                </td>
-                <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm text-right">
-                  <span
-                    className={`font-semibold ${
-                      standing.isGameweekWinner
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-900 dark:text-gray-100"
-                    }`}
-                  >
-                    {standing.gameweekPoints}
-                  </span>
-                </td>
-                <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm text-right">
-                  <span className="font-bold text-gray-900 dark:text-gray-100">
-                    {formatPoints(standing.totalPoints)}
-                  </span>
-                </td>
-                <td className="hidden sm:table-cell px-4 py-4 text-sm text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {getRankChangeIcon(standing.rankChange)}
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {getRankChangeText(standing.rankChange)}
+                  </td>
+                  <td className="px-3 sm:px-5 py-4 text-sm text-right">
+                    <span
+                      className={`font-bold ${
+                        standing.isGameweekWinner
+                          ? "text-green-600"
+                          : "text-gray-900"
+                      }`}
+                    >
+                      {standing.gameweekPoints}
                     </span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-3 sm:px-5 py-4 text-sm text-right">
+                    <span className="font-bold text-gray-900" style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem" }}>
+                      {formatPoints(standing.totalPoints)}
+                    </span>
+                  </td>
+                  <td className="hidden sm:table-cell px-5 py-4 text-sm text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {getRankChangeIcon(standing.rankChange)}
+                      <span className="text-xs text-gray-400">
+                        {getRankChangeText(standing.rankChange)}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

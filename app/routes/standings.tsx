@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { GameweekNavigator } from "~/components/GameweekNavigator/GameweekNavigator";
@@ -14,7 +14,6 @@ export async function loader() {
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
-  // Fetch gameweek history for each manager
   const managers = await Promise.all(
     leagueData.standings.results.map(async (manager) => {
       const history = await fetchManagerHistory(manager.entry.toString());
@@ -32,7 +31,6 @@ export async function loader() {
 export default function Standings({ loaderData }: Route.ComponentProps) {
   const { managers } = useLoaderData<typeof loader>();
 
-  // Get available gameweeks and default to most recent
   const availableGameweeks = getAvailableGameweeks(managers);
   const mostRecentGameweek =
     availableGameweeks.length > 0
@@ -41,30 +39,29 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
 
   const [currentGameweek, setCurrentGameweek] = useState(mostRecentGameweek);
 
-  // Calculate standings for current gameweek
   const handleNavigate = (gameweek: number) => {
     setCurrentGameweek(gameweek);
   };
 
-  // Show empty state if no managers
   if (managers.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              Historical Standings
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+      <div className="min-h-screen" style={{ background: "var(--color-page-standings)" }}>
+        <section className="kit-hero kit-diagonal-cut" style={{ background: "var(--color-page-standings)" }}>
+          <div className="kit-watermark">GW</div>
+          <div className="kit-stripe" style={{ background: "var(--color-page-standings-light)" }} />
+          <div className="relative z-10 max-w-7xl mx-auto w-full">
+            <p className="text-white/60 text-sm uppercase tracking-[0.2em] font-medium mb-3">
               League standings across all gameweeks
             </p>
+            <h1 className="kit-headline text-white text-5xl md:text-7xl lg:text-8xl">
+              Historical Standings
+            </h1>
           </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12 px-4">
-            <p className="text-xl text-gray-500 dark:text-gray-400">
-              📊 No data available for this league
+        </section>
+        <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-16">
+          <div className="kit-card p-12 text-center">
+            <p className="text-xl text-gray-400">
+              No data available for this league
             </p>
           </div>
         </main>
@@ -75,61 +72,28 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
   const standingsData = calculateHistoricalStandings(managers, currentGameweek);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Historical Standings
-          </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+    <div className="min-h-screen" style={{ background: "var(--color-page-standings)" }}>
+      {/* Hero Section */}
+      <section className="kit-hero kit-diagonal-cut" style={{ background: "var(--color-page-standings)" }}>
+        <div className="kit-watermark">GW</div>
+        <div className="kit-stripe" style={{ background: "var(--color-page-standings-light)" }} />
+        <div className="relative z-10 max-w-7xl mx-auto w-full">
+          <p className="text-white/60 text-sm uppercase tracking-[0.2em] font-medium mb-3 kit-animate-slide-up">
             League standings across all gameweeks
           </p>
+          <h1 className="kit-headline text-white text-5xl md:text-7xl lg:text-8xl kit-animate-slide-up" style={{ "--delay": "100ms" } as React.CSSProperties}>
+            Historical Standings
+          </h1>
         </div>
-      </header>
+      </section>
 
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <Link
-              to="/"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              League Table
-            </Link>
-            <Link
-              to="/gameweeks"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              Gameweek History
-            </Link>
-            <Link
-              to="/standings"
-              className="border-b-2 border-blue-500 py-4 px-1 text-sm font-medium text-blue-600 dark:text-blue-400"
-            >
-              Historical Standings
-            </Link>
-            <Link
-              to="/transfers"
-              className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              Transfer Activity
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Gameweek Navigator */}
+      {/* Content */}
+      <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-24 sm:pb-16 space-y-6">
         <GameweekNavigator
           currentGameweek={currentGameweek}
           availableGameweeks={availableGameweeks}
           onNavigate={handleNavigate}
         />
-
-        {/* Historical League Table */}
         <HistoricalLeagueTable data={standingsData} />
       </main>
     </div>

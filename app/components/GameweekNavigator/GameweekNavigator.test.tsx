@@ -136,7 +136,7 @@ describe("GameweekNavigator", () => {
     expect(select.value).toBe("5");
   });
 
-  it("should render with dark mode styling classes", () => {
+  it("should render with kit-card styling", () => {
     const { container } = render(
       <GameweekNavigator
         currentGameweek={5}
@@ -145,11 +145,8 @@ describe("GameweekNavigator", () => {
       />
     );
 
-    // Check that dark mode classes are present
-    const buttons = container.querySelectorAll("button");
-    buttons.forEach((button) => {
-      expect(button.className).toMatch(/dark:/);
-    });
+    // Check that Kit Day card styling is present
+    expect(container.querySelector(".kit-card")).toBeInTheDocument();
   });
 
   it("should handle empty available gameweeks gracefully", () => {

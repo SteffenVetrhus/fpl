@@ -143,10 +143,10 @@ describe("Transfers Route", () => {
 
     render(<RouteStub initialEntries={["/transfers"]} />);
 
-    await screen.findAllByText(/transfer activity/i, {}, { timeout: 3000 });
+    await screen.findAllByText(/transfer/i, {}, { timeout: 3000 });
 
-    expect(screen.getByText(/League Table/i)).toBeInTheDocument();
-    expect(screen.getByText(/Gameweek History/i)).toBeInTheDocument();
+    // Navigation is now in the shared root layout; verify page-specific content
+    expect(screen.getAllByText(/Transfer Market/i).length).toBeGreaterThan(0);
   });
 
   it("loader should fetch transfer data", async () => {
