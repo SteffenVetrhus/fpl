@@ -47,6 +47,9 @@
   --color-page-records: #C2410C;
   --color-page-records-light: #EA580C;
   --color-page-records-dark: #9A3412;
+  --color-page-roast: #DC2626;
+  --color-page-roast-light: #EF4444;
+  --color-page-roast-dark: #B91C1C;
 }
 
 /* Base styles */

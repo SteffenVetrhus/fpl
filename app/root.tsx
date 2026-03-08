@@ -27,6 +27,7 @@ import {
   Swords,
   Bot,
   BookOpen,
+  Flame,
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -62,6 +63,7 @@ const banterNavItems = [
   { to: "/head-to-head", label: "Head to Head", icon: Swords, end: false, color: "#BE123C" },
   { to: "/banter-bot", label: "Banter Bot", icon: Bot, end: false, color: "#0F766E" },
   { to: "/records", label: "History Books", icon: BookOpen, end: false, color: "#C2410C" },
+  { to: "/roast-news", label: "Roast News", icon: Flame, end: false, color: "#DC2626" },
 ];
 
 function HamburgerMenu() {
