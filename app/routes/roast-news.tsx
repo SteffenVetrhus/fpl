@@ -150,6 +150,27 @@ function generateGWRoasts(
     }
   }
 
+  // GW4: Mid-Table Mediocrity — the most painfully average scorer
+  if (players.length >= 3) {
+    const avg =
+      players.reduce((sum, p) => sum + p.points, 0) / players.length;
+    const mostAverage = [...players].sort(
+      (a, b) => Math.abs(a.points - avg) - Math.abs(b.points - avg)
+    )[0];
+    if (
+      mostAverage &&
+      mostAverage.name !== winner?.name &&
+      mostAverage.name !== loser?.name
+    ) {
+      roasts.push({
+        target: mostAverage.name,
+        category: "Mid-Table Mediocrity",
+        headline: `${mostAverage.name} scores ${mostAverage.points} pts — the definition of meh`,
+        body: `With a league average of ${Math.round(avg)} points, ${mostAverage.name} scored exactly ${mostAverage.points}. Not good enough to celebrate, not bad enough to be interesting. You are the lukewarm tea of FPL. Aggressively forgettable.`,
+      });
+    }
+  }
+
   // GW2: Transfer Addict — managers who took hits
   const hitTakers = [...players]
     .filter((p) => p.transfersCost > 0)
@@ -213,6 +234,7 @@ const categoryColors: Record<string, string> = {
   "Bench Burner": "#D97706",
   "Transfer Addict": "#7C3AED",
   "Rank Freefall": "#0891B2",
+  "Mid-Table Mediocrity": "#6B7280",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
