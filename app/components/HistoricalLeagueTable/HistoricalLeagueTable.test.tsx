@@ -17,6 +17,8 @@ describe("HistoricalLeagueTable", () => {
         prevRank: 3,
         rankChange: 2,
         gameweekPoints: 92,
+        transferCost: 8,
+        netGameweekPoints: 84,
         totalPoints: 363,
         isGameweekWinner: true,
       },
@@ -27,6 +29,8 @@ describe("HistoricalLeagueTable", () => {
         prevRank: 1,
         rankChange: -1,
         gameweekPoints: 62,
+        transferCost: 0,
+        netGameweekPoints: 62,
         totalPoints: 361,
         isGameweekWinner: false,
       },
@@ -37,6 +41,8 @@ describe("HistoricalLeagueTable", () => {
         prevRank: 2,
         rankChange: -1,
         gameweekPoints: 54,
+        transferCost: 4,
+        netGameweekPoints: 50,
         totalPoints: 358,
         isGameweekWinner: false,
       },
@@ -102,7 +108,7 @@ describe("HistoricalLeagueTable", () => {
   it("should highlight gameweek winner", () => {
     const { container } = render(<HistoricalLeagueTable data={mockData} />);
 
-    // Alice is the gameweek winner (92 points)
+    // Alice is the gameweek winner (84 net points)
     // Find her row and check for winner styling
     const rows = container.querySelectorAll("tr");
     const aliceRow = Array.from(rows).find((row) =>
@@ -185,6 +191,8 @@ describe("HistoricalLeagueTable", () => {
           prevRank: null,
           rankChange: 0,
           gameweekPoints: 85,
+          transferCost: 0,
+          netGameweekPoints: 85,
           totalPoints: 85,
           isGameweekWinner: true,
         },
@@ -195,6 +203,8 @@ describe("HistoricalLeagueTable", () => {
           prevRank: null,
           rankChange: 0,
           gameweekPoints: 85,
+          transferCost: 0,
+          netGameweekPoints: 85,
           totalPoints: 85,
           isGameweekWinner: true,
         },
@@ -222,6 +232,8 @@ describe("HistoricalLeagueTable", () => {
           prevRank: null,
           rankChange: 0,
           gameweekPoints: 85,
+          transferCost: 0,
+          netGameweekPoints: 85,
           totalPoints: 85,
           isGameweekWinner: true,
         },
@@ -230,7 +242,22 @@ describe("HistoricalLeagueTable", () => {
 
     render(<HistoricalLeagueTable data={gw1Data} />);
 
-    // Should show dash for no previous rank
-    expect(screen.getByText("-")).toBeInTheDocument();
+    // Should show dashes for no previous rank and no hits
+    const dashes = screen.getAllByText("-");
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should display transfer hit badge for managers with hits", () => {
+    render(<HistoricalLeagueTable data={mockData} />);
+
+    // Alice has -8 hit, Charlie has -4 hit
+    expect(screen.getByText("-8")).toBeInTheDocument();
+    expect(screen.getByText("-4")).toBeInTheDocument();
+  });
+
+  it("should display Hits column header", () => {
+    render(<HistoricalLeagueTable data={mockData} />);
+
+    expect(screen.getByText("Hits")).toBeInTheDocument();
   });
 });

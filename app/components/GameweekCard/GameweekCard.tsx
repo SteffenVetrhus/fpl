@@ -6,6 +6,8 @@ interface GameweekCardProps {
 }
 
 export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
+  const netPoints = gameweek.points - gameweek.event_transfers_cost;
+
   const getRankEmoji = (rank: number) => {
     if (rank === 2) return "🥈";
     if (rank === 3) return "🥉";
@@ -48,13 +50,18 @@ export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
       <div className="mb-4">
         <div className="flex items-baseline gap-2">
           <span
-            className={`font-bold ${getPerformanceColor(gameweek.points)}`}
+            className={`font-bold ${getPerformanceColor(netPoints)}`}
             style={{ fontFamily: "var(--font-display)", fontSize: "3.5rem", lineHeight: 1 }}
           >
-            {gameweek.points}
+            {netPoints}
           </span>
           <span className="kit-stat-label text-gray-400">pts</span>
         </div>
+        {gameweek.event_transfers_cost > 0 && (
+          <div className="text-xs text-gray-400 mt-1">
+            {gameweek.points} - {gameweek.event_transfers_cost} hit
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -76,12 +83,16 @@ export function GameweekCard({ gameweek, isWinner }: GameweekCardProps) {
 
       {/* Transfers */}
       {gameweek.event_transfers > 0 && (
-        <div className="mt-3 bg-blue-50 rounded-lg p-2 text-xs text-blue-700 font-medium">
+        <div className={`mt-3 rounded-lg p-2 text-xs font-medium ${
+          gameweek.event_transfers_cost > 0
+            ? "bg-red-50 text-red-700"
+            : "bg-blue-50 text-blue-700"
+        }`}>
           {gameweek.event_transfers === 1
             ? "1 transfer"
             : `${gameweek.event_transfers} transfers`}
           {gameweek.event_transfers_cost > 0 &&
-            ` (-${gameweek.event_transfers_cost} pts)`}
+            ` (-${gameweek.event_transfers_cost} pts hit)`}
         </div>
       )}
     </div>

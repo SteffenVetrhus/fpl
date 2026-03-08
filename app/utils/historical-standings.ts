@@ -13,6 +13,8 @@ export interface GameweekStanding {
   prevRank: number | null;
   rankChange: number;
   gameweekPoints: number;
+  transferCost: number;
+  netGameweekPoints: number;
   totalPoints: number;
   isGameweekWinner: boolean;
 }
@@ -78,6 +80,8 @@ export function calculateHistoricalStandings(
       rank: currentGw.rank,
       prevRank: prevGw?.rank ?? null,
       gameweekPoints: currentGw.points,
+      transferCost: currentGw.event_transfers_cost,
+      netGameweekPoints: currentGw.points - currentGw.event_transfers_cost,
       totalPoints: currentGw.total_points,
     };
   });
@@ -85,7 +89,10 @@ export function calculateHistoricalStandings(
   // Sort by rank
   managerData.sort((a, b) => a.rank - b.rank);
 
-  // Find highest points for gameweek winner
+  // Find highest net points for gameweek winner (accounts for transfer penalties)
+  const highestNetPoints = Math.max(
+    ...managerData.map((m) => m.netGameweekPoints)
+  );
   const highestPoints = Math.max(...managerData.map((m) => m.gameweekPoints));
   const lowestPoints = Math.min(...managerData.map((m) => m.gameweekPoints));
 
@@ -104,8 +111,10 @@ export function calculateHistoricalStandings(
     prevRank: m.prevRank,
     rankChange: m.prevRank !== null ? m.prevRank - m.rank : 0,
     gameweekPoints: m.gameweekPoints,
+    transferCost: m.transferCost,
+    netGameweekPoints: m.netGameweekPoints,
     totalPoints: m.totalPoints,
-    isGameweekWinner: m.gameweekPoints === highestPoints,
+    isGameweekWinner: m.netGameweekPoints === highestNetPoints,
   }));
 
   return {

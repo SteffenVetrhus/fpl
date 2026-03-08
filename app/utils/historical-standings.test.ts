@@ -127,18 +127,27 @@ describe("calculateHistoricalStandings", () => {
     expect(result.standings[2].managerName).toBe("Charlie");
   });
 
-  it("should identify gameweek winner correctly", () => {
+  it("should identify gameweek winner by net points (after transfer hits)", () => {
     const result = calculateHistoricalStandings(mockManagers, 5);
 
-    // Alice scored 92 points (highest), so she should be gameweek winner
+    // Alice scored 92 points with -8 hit = 84 net (highest net), so she should be gameweek winner
     expect(result.standings[0].isGameweekWinner).toBe(true);
     expect(result.standings[0].gameweekPoints).toBe(92);
+    expect(result.standings[0].transferCost).toBe(8);
+    expect(result.standings[0].netGameweekPoints).toBe(84);
 
+    // Bob: 62 - 4 = 58 net
     expect(result.standings[1].isGameweekWinner).toBe(false);
+    expect(result.standings[1].transferCost).toBe(4);
+    expect(result.standings[1].netGameweekPoints).toBe(58);
+
+    // Charlie: 54 - 4 = 50 net
     expect(result.standings[2].isGameweekWinner).toBe(false);
+    expect(result.standings[2].transferCost).toBe(4);
+    expect(result.standings[2].netGameweekPoints).toBe(50);
   });
 
-  it("should handle tied gameweek winners", () => {
+  it("should handle tied gameweek winners when net points are equal", () => {
     const tiedManagers: ManagerGameweekData[] = [
       {
         name: "Alice",
@@ -158,9 +167,39 @@ describe("calculateHistoricalStandings", () => {
 
     const result = calculateHistoricalStandings(tiedManagers, 1);
 
-    // Both should be gameweek winners (tied on 85 points)
+    // Both should be gameweek winners (tied on 85 net points, no hits)
     expect(result.standings[0].isGameweekWinner).toBe(true);
     expect(result.standings[1].isGameweekWinner).toBe(true);
+  });
+
+  it("should not treat same raw points as tied when one took a transfer hit", () => {
+    const hitManagers: ManagerGameweekData[] = [
+      {
+        name: "Alice",
+        teamName: "Alice's Aces",
+        gameweeks: [
+          { event: 1, points: 52, total_points: 52, rank: 1, rank_sort: 1, overall_rank: 125000, bank: 0, value: 1000, event_transfers: 0, event_transfers_cost: 0, points_on_bench: 10 },
+        ],
+      },
+      {
+        name: "Bob",
+        teamName: "Bob's Best",
+        gameweeks: [
+          { event: 1, points: 52, total_points: 48, rank: 2, rank_sort: 2, overall_rank: 110000, bank: 5, value: 1005, event_transfers: 2, event_transfers_cost: 4, points_on_bench: 12 },
+        ],
+      },
+    ];
+
+    const result = calculateHistoricalStandings(hitManagers, 1);
+
+    // Alice: 52 net, Bob: 48 net — Alice is the sole winner
+    expect(result.standings[0].isGameweekWinner).toBe(true);
+    expect(result.standings[0].managerName).toBe("Alice");
+    expect(result.standings[0].netGameweekPoints).toBe(52);
+    expect(result.standings[1].isGameweekWinner).toBe(false);
+    expect(result.standings[1].managerName).toBe("Bob");
+    expect(result.standings[1].netGameweekPoints).toBe(48);
+    expect(result.standings[1].transferCost).toBe(4);
   });
 
   it("should calculate rank changes from previous gameweek", () => {

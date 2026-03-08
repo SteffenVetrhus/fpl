@@ -108,6 +108,9 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
                 <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-right">
                   GW Pts
                 </th>
+                <th className="hidden sm:table-cell px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-right">
+                  Hits
+                </th>
                 <th className="px-3 sm:px-5 py-4 text-xs font-semibold text-white/80 uppercase tracking-wider text-right">
                   Total
                 </th>
@@ -162,15 +165,31 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
                     </div>
                   </td>
                   <td className="px-3 sm:px-5 py-4 text-sm text-right">
-                    <span
-                      className={`font-bold ${
-                        standing.isGameweekWinner
-                          ? "text-green-600"
-                          : "text-gray-900"
-                      }`}
-                    >
-                      {standing.gameweekPoints}
-                    </span>
+                    <div>
+                      <span
+                        className={`font-bold ${
+                          standing.isGameweekWinner
+                            ? "text-green-600"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        {standing.gameweekPoints}
+                      </span>
+                      {standing.transferCost > 0 && (
+                        <div className="text-xs text-red-500 font-medium sm:hidden">
+                          -{standing.transferCost} hit
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="hidden sm:table-cell px-5 py-4 text-sm text-right">
+                    {standing.transferCost > 0 ? (
+                      <span className="inline-block px-2 py-0.5 bg-red-50 text-red-600 text-xs font-bold rounded-full">
+                        -{standing.transferCost}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
                   </td>
                   <td className="px-3 sm:px-5 py-4 text-sm text-right">
                     <span className="font-bold text-gray-900" style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem" }}>
