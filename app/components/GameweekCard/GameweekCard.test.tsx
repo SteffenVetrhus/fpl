@@ -22,9 +22,22 @@ describe("GameweekCard", () => {
     expect(screen.getByText(/Gameweek 5/i)).toBeInTheDocument();
   });
 
-  it("should display points prominently", () => {
+  it("should display net points prominently (points minus transfer hits)", () => {
     render(<GameweekCard gameweek={mockGameweek} isWinner={false} />);
-    expect(screen.getByText("87")).toBeInTheDocument();
+    // 87 points - 4 hit = 83 net
+    expect(screen.getByText("83")).toBeInTheDocument();
+  });
+
+  it("should show breakdown when transfer hit taken", () => {
+    render(<GameweekCard gameweek={mockGameweek} isWinner={false} />);
+    // Shows "87 - 4 hit" breakdown
+    expect(screen.getByText(/87 - 4 hit/)).toBeInTheDocument();
+  });
+
+  it("should not show breakdown when no transfer hit", () => {
+    const noHitGameweek = { ...mockGameweek, event_transfers_cost: 0 };
+    render(<GameweekCard gameweek={noHitGameweek} isWinner={false} />);
+    expect(screen.queryByText(/hit/)).not.toBeInTheDocument();
   });
 
   it("should show rank", () => {
@@ -37,9 +50,9 @@ describe("GameweekCard", () => {
     expect(screen.getByText("9")).toBeInTheDocument();
   });
 
-  it("should show transfer information when transfers made", () => {
+  it("should show transfer information with hit cost when transfers made", () => {
     render(<GameweekCard gameweek={mockGameweek} isWinner={false} />);
-    expect(screen.getByText(/2.*transfer/i)).toBeInTheDocument();
+    expect(screen.getByText(/2.*transfer.*-4.*hit/i)).toBeInTheDocument();
   });
 
   it("should highlight winner with special styling when isWinner is true", () => {
