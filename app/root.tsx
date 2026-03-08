@@ -8,6 +8,7 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { Trophy, CalendarDays, BarChart3, ArrowLeftRight } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -26,10 +27,10 @@ export const links: Route.LinksFunction = () => [
 
 function FloatingNav() {
   const navItems = [
-    { to: "/", label: "Table", end: true },
-    { to: "/gameweeks", label: "Gameweeks", end: false },
-    { to: "/standings", label: "Standings", end: false },
-    { to: "/transfers", label: "Transfers", end: false },
+    { to: "/", label: "Table", icon: Trophy, end: true },
+    { to: "/gameweeks", label: "Gameweeks", icon: CalendarDays, end: false },
+    { to: "/standings", label: "Standings", icon: BarChart3, end: false },
+    { to: "/transfers", label: "Transfers", icon: ArrowLeftRight, end: false },
   ];
 
   return (
@@ -42,14 +43,15 @@ function FloatingNav() {
             end={item.end}
             viewTransition
             className={({ isActive }) =>
-              `rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              `rounded-full px-3 py-2 text-sm font-semibold transition-colors flex items-center gap-1.5 ${
                 isActive
                   ? "bg-white/20 text-white"
                   : "text-white/60 hover:text-white"
               }`
             }
           >
-            {item.label}
+            <item.icon size={18} />
+            <span className="hidden sm:inline">{item.label}</span>
           </NavLink>
         ))}
       </div>
