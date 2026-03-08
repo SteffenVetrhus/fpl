@@ -1,0 +1,4 @@
+FROM postgres:16-alpine
+COPY app/lib/db/schema.sql /docker-entrypoint-initdb.d/001-schema.sql
+ENV POSTGRES_DB=fpl
+ENV POSTGRES_USER=fpl
