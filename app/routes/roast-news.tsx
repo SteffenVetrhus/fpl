@@ -62,7 +62,14 @@ function buildManagerGWData(
     .filter((m): m is ManagerGWData => m !== null);
 }
 
-function generateGWRoasts(players: ManagerGWData[], gw: number): GWRoast[] {
+function generateGWRoasts(
+  players: ManagerGWData[],
+  gw: number,
+  allManagerData?: Array<{
+    managerId: number;
+    history: Array<{ event: number; overall_rank: number }>;
+  }>
+): GWRoast[] {
   if (players.length === 0) return [];
   const roasts: GWRoast[] = [];
 
@@ -103,6 +110,44 @@ function generateGWRoasts(players: ManagerGWData[], gw: number): GWRoast[] {
         ? `${benchKing.name} had ${benchKing.benchPoints} points just sitting there on the bench. With those points, they would have won the gameweek. Imagine being your own worst enemy — oh wait, you don't have to imagine.`
         : `${benchKing.name} left ${benchKing.benchPoints} points gathering dust on the bench in GW${gw}. Your bench is putting in more work than your starting XI. Maybe let them have a go?`,
     });
+  }
+
+  // GW3: Rank Freefall — biggest overall rank drop compared to previous GW
+  if (gw > 1) {
+    const withPrevRank = players
+      .map((p) => {
+        const allData = allManagerData;
+        const prev = allData?.find(
+          (m) =>
+            m.managerId === p.managerId &&
+            m.history.find((h: { event: number }) => h.event === gw - 1)
+        );
+        const prevGW = prev?.history.find(
+          (h: { event: number }) => h.event === gw - 1
+        );
+        if (!prevGW) return null;
+        return {
+          ...p,
+          prevRank: prevGW.overall_rank,
+          rankDrop: p.overallRank - prevGW.overall_rank,
+        };
+      })
+      .filter(
+        (p): p is ManagerGWData & { prevRank: number; rankDrop: number } =>
+          p !== null
+      )
+      .sort((a, b) => b.rankDrop - a.rankDrop);
+
+    const faller = withPrevRank[0];
+    if (faller && faller.rankDrop > 0) {
+      const dropFormatted = faller.rankDrop.toLocaleString();
+      roasts.push({
+        target: faller.name,
+        category: "Rank Freefall",
+        headline: `${faller.name} plummets ${dropFormatted} places in the world`,
+        body: `${faller.name} dropped from ${faller.prevRank.toLocaleString()} to ${faller.overallRank.toLocaleString()} in the global rankings after GW${gw}. That's not a rank change, that's a controlled demolition of your season. Gravity is undefeated.`,
+      });
+    }
   }
 
   // GW2: Transfer Addict — managers who took hits
@@ -150,7 +195,7 @@ export async function loader() {
   const editions: GameweekEdition[] = [];
   for (let gw = maxGW; gw >= 1; gw--) {
     const players = buildManagerGWData(managers, gw);
-    const roasts = generateGWRoasts(players, gw);
+    const roasts = generateGWRoasts(players, gw, managers);
     if (roasts.length > 0) {
       editions.push({ gameweek: gw, roasts });
     }
@@ -167,6 +212,7 @@ const categoryColors: Record<string, string> = {
   "GW Flop": "#B91C1C",
   "Bench Burner": "#D97706",
   "Transfer Addict": "#7C3AED",
+  "Rank Freefall": "#0891B2",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
