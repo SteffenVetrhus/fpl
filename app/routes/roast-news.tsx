@@ -105,6 +105,24 @@ function generateGWRoasts(players: ManagerGWData[], gw: number): GWRoast[] {
     });
   }
 
+  // GW2: Transfer Addict — managers who took hits
+  const hitTakers = [...players]
+    .filter((p) => p.transfersCost > 0)
+    .sort((a, b) => b.transfersCost - a.transfersCost);
+  if (hitTakers.length > 0) {
+    const worst = hitTakers[0];
+    const netPoints = worst.points - worst.transfersCost;
+    roasts.push({
+      target: worst.name,
+      category: "Transfer Addict",
+      headline: `${worst.name} burns ${worst.transfersCost} pts on transfer hits`,
+      body:
+        netPoints < (loser?.points ?? 0)
+          ? `${worst.name} took a -${worst.transfersCost} hit and scored ${worst.points} points, netting just ${netPoints}. After hits, they're actually the worst scorer this week. The transfers made things worse. Therapy might be cheaper.`
+          : `${worst.name} couldn't resist tinkering and took a -${worst.transfersCost} hit in GW${gw}. Scored ${worst.points} but only netted ${netPoints} after the damage. That's not a transfer strategy, that's a cry for help.`,
+    });
+  }
+
   return roasts;
 }
 
@@ -148,6 +166,7 @@ const categoryColors: Record<string, string> = {
   "GW Winner": "#15803D",
   "GW Flop": "#B91C1C",
   "Bench Burner": "#D97706",
+  "Transfer Addict": "#7C3AED",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
