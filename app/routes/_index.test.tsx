@@ -6,7 +6,16 @@ import type { FPLLeagueStandings } from "~/lib/fpl-api/types";
 
 vi.mock("~/lib/fpl-api/client");
 vi.mock("~/config/env", () => ({
-  getEnvConfig: () => ({ fplLeagueId: "1313411" }),
+  getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
+}));
+vi.mock("~/lib/pocketbase/auth", () => ({
+  requireAuth: vi.fn().mockResolvedValue({
+    id: "user1",
+    email: "alice@fpl.local",
+    fplManagerId: 123456,
+    playerName: "Alice Johnson",
+    teamName: "Alice's Aces",
+  }),
 }));
 
 describe("Home Route (_index)", () => {
@@ -59,8 +68,8 @@ describe("Home Route (_index)", () => {
     const RouteStub = createRoutesStub([
       {
         path: "/",
-        Component: Index,
-        loader: () => mockLeagueData,
+        Component: Index as any,
+        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -83,8 +92,8 @@ describe("Home Route (_index)", () => {
     const RouteStub = createRoutesStub([
       {
         path: "/",
-        Component: Index,
-        loader: () => mockLeagueData,
+        Component: Index as any,
+        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -99,8 +108,8 @@ describe("Home Route (_index)", () => {
     const RouteStub = createRoutesStub([
       {
         path: "/",
-        Component: Index,
-        loader: () => mockLeagueData,
+        Component: Index as any,
+        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -119,10 +128,11 @@ describe("Home Route (_index)", () => {
 
     vi.mocked(fetchLeagueStandings).mockResolvedValue(mockLeagueData);
 
-    const result = await loader();
+    const request = new Request("http://localhost:3000/");
+    const result = await loader({ request, params: {}, context: {} } as any);
 
     expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
-    expect(result).toEqual(mockLeagueData);
+    expect(result).toEqual({ ...mockLeagueData, currentManagerId: 123456 });
   });
 
   it("loader should handle errors", async () => {
@@ -132,6 +142,7 @@ describe("Home Route (_index)", () => {
       new Error("API Error")
     );
 
-    await expect(loader()).rejects.toThrow("API Error");
+    const request = new Request("http://localhost:3000/");
+    await expect(loader({ request, params: {}, context: {} } as any)).rejects.toThrow("API Error");
   });
 });

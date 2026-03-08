@@ -7,11 +7,28 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://fpl:${DB_PASSWORD:-fplsecret}@postgres:5432/fpl
+      - POCKETBASE_URL=http://pocketbase:8090
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+      pocketbase:
+        condition: service_healthy
+
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile.pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:16-alpine
@@ -52,3 +69,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  pb_data:

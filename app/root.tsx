@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, createContext, useContext } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -8,7 +8,11 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
+  useRouteLoaderData,
 } from "react-router";
+import { LogOut, User } from "lucide-react";
+import { getOptionalAuth, type AuthUser } from "~/lib/pocketbase/auth";
+import { getEnvConfig } from "~/config/env";
 
 import {
   Trophy,
@@ -39,6 +43,27 @@ import {
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export interface AuthContext {
+  user: AuthUser | null;
+}
+
+const AuthCtx = createContext<AuthContext>({ user: null });
+
+export function useAuth(): AuthContext {
+  return useContext(AuthCtx);
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const config = getEnvConfig();
+  const user = await getOptionalAuth(request);
+  return {
+    user,
+    ENV: {
+      POCKETBASE_URL: config.pocketbaseUrl,
+    },
+  };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -89,6 +114,7 @@ function HamburgerMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   // Close menu on navigation
   useEffect(() => {
@@ -130,6 +156,28 @@ function HamburgerMenu() {
                   <X size={20} />
                 </button>
               </div>
+
+              {/* User info */}
+              {user && (
+                <div className="p-4 border-b border-white/10">
+                  <div className="flex items-center gap-3 px-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+                      <User size={16} color="white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{user.playerName}</p>
+                      <p className="text-xs text-white/40 truncate">{user.teamName}</p>
+                    </div>
+                    <NavLink
+                      to="/logout"
+                      className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                      aria-label="Sign out"
+                    >
+                      <LogOut size={16} />
+                    </NavLink>
+                  </div>
+                </div>
+              )}
 
               {/* Core navigation */}
               <div className="p-4">
@@ -223,6 +271,10 @@ function HamburgerMenu() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData("root") as { user: AuthUser | null; ENV: { POCKETBASE_URL: string } } | undefined;
+  const user = data?.user ?? null;
+  const env = data?.ENV;
+
   return (
     <html lang="en">
       <head>
@@ -232,8 +284,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <HamburgerMenu />
-        {children}
+        <AuthCtx.Provider value={{ user }}>
+          <HamburgerMenu />
+          {children}
+        </AuthCtx.Provider>
+        {env && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.ENV = ${JSON.stringify(env)}`,
+            }}
+          />
+        )}
         <ScrollRestoration />
         <Scripts />
       </body>

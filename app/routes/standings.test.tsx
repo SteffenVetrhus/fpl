@@ -6,7 +6,16 @@ import type { FPLManagerHistory, FPLLeagueStandings } from "~/lib/fpl-api/types"
 
 vi.mock("~/lib/fpl-api/client");
 vi.mock("~/config/env", () => ({
-  getEnvConfig: () => ({ fplLeagueId: "1313411" }),
+  getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
+}));
+vi.mock("~/lib/pocketbase/auth", () => ({
+  requireAuth: vi.fn().mockResolvedValue({
+    id: "user1",
+    email: "alice@fpl.local",
+    fplManagerId: 123456,
+    playerName: "Alice Johnson",
+    teamName: "Alice's Aces",
+  }),
 }));
 
 describe("Standings Route", () => {
@@ -152,12 +161,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -181,12 +191,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -210,12 +221,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -237,12 +249,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -263,12 +276,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -288,12 +302,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -318,7 +333,8 @@ describe("Standings Route", () => {
       .mockResolvedValueOnce(mockHistoryAlice)
       .mockResolvedValueOnce(mockHistoryBob);
 
-    const result = await loader();
+    const request = new Request("http://localhost:3000/standings");
+    const result = await loader({ request, params: {}, context: {} } as any);
 
     expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
     expect(fetchManagerHistory).toHaveBeenCalledWith("123456");
@@ -333,12 +349,13 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistoryAlice.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistoryBob.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -362,9 +379,10 @@ describe("Standings Route", () => {
       [
         {
           path: "/standings",
-          Component: Standings,
+          Component: Standings as any,
           loader: () => ({
             managers: [],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
