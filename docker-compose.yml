@@ -21,23 +21,24 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 30s
 
   postgres:
     image: postgres:16-alpine
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./app/lib/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+      - ./app/lib/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     environment:
       POSTGRES_DB: fpl
       POSTGRES_USER: fpl
       POSTGRES_PASSWORD: ${DB_PASSWORD:-fplsecret}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fpl"]
+      test: ["CMD-SHELL", "pg_isready -U fpl -d fpl"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
