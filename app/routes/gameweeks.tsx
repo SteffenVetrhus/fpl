@@ -2,9 +2,11 @@ import { useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { GameweekHistory } from "~/components/GameweekHistory/GameweekHistory";
+import { GameweekVictoriesTable } from "~/components/GameweekVictoriesTable/GameweekVictoriesTable";
 import { PlayerSelector } from "~/components/PlayerSelector/PlayerSelector";
 import type { Route } from "./+types/gameweeks";
 import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
+import { ArrowLeft } from "lucide-react";
 
 export async function loader() {
   const config = getEnvConfig();
@@ -30,15 +32,17 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
 
   const playerParam = searchParams.get("player");
-  const selectedPlayerName =
+  const selectedManager =
     playerParam && managers.find((m) => m.name === playerParam)
-      ? playerParam
-      : managers[0]?.name || "";
-
-  const selectedManager = managers.find((m) => m.name === selectedPlayerName);
+      ? managers.find((m) => m.name === playerParam)
+      : null;
 
   const handlePlayerSelect = (managerName: string) => {
     navigate(`/gameweeks?player=${encodeURIComponent(managerName)}`);
+  };
+
+  const handleBackToTable = () => {
+    navigate("/gameweeks");
   };
 
   return (
@@ -60,28 +64,47 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
       {/* Content */}
       <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-24 sm:pb-16">
         <div className="kit-card p-6 md:p-8">
-          <PlayerSelector
-            managers={managers}
-            selectedManager={selectedPlayerName}
-            onSelect={handlePlayerSelect}
-          />
-
-          {selectedManager && (
+          {selectedManager ? (
             <>
-              <div className="mb-6">
-                <h2 className="kit-headline text-2xl text-gray-900">
-                  {selectedManager.name}
-                </h2>
-                <p className="text-sm text-gray-500 italic">
-                  {selectedManager.teamName}
-                </p>
+              <button
+                onClick={handleBackToTable}
+                className="inline-flex items-center gap-2 text-sm font-medium mb-6 px-3 py-1.5 rounded-full transition-colors"
+                style={{
+                  color: "var(--color-page-gameweeks)",
+                  background: "rgba(29, 78, 216, 0.08)",
+                }}
+              >
+                <ArrowLeft size={16} />
+                All players
+              </button>
+
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="kit-headline text-2xl text-gray-900">
+                    {selectedManager.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 italic">
+                    {selectedManager.teamName}
+                  </p>
+                </div>
+                <PlayerSelector
+                  managers={managers}
+                  selectedManager={selectedManager.name}
+                  onSelect={handlePlayerSelect}
+                />
               </div>
+
               <GameweekHistory
                 gameweeks={selectedManager.gameweeks}
                 managerName={selectedManager.name}
                 allManagers={managers}
               />
             </>
+          ) : (
+            <GameweekVictoriesTable
+              managers={managers}
+              onSelectPlayer={handlePlayerSelect}
+            />
           )}
         </div>
       </main>
