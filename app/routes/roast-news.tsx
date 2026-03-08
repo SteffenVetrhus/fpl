@@ -88,6 +88,23 @@ function generateGWRoasts(players: ManagerGWData[], gw: number): GWRoast[] {
     });
   }
 
+  // GW1: Bench Burner — most points wasted on the bench
+  const benchSorted = [...players].sort((a, b) => b.benchPoints - a.benchPoints);
+  const benchKing = benchSorted[0];
+  if (benchKing && benchKing.benchPoints > 0) {
+    const couldHaveWon =
+      benchKing.points + benchKing.benchPoints > (winner?.points ?? 0) &&
+      benchKing.name !== winner?.name;
+    roasts.push({
+      target: benchKing.name,
+      category: "Bench Burner",
+      headline: `${benchKing.name} leaves ${benchKing.benchPoints} pts rotting on the bench`,
+      body: couldHaveWon
+        ? `${benchKing.name} had ${benchKing.benchPoints} points just sitting there on the bench. With those points, they would have won the gameweek. Imagine being your own worst enemy — oh wait, you don't have to imagine.`
+        : `${benchKing.name} left ${benchKing.benchPoints} points gathering dust on the bench in GW${gw}. Your bench is putting in more work than your starting XI. Maybe let them have a go?`,
+    });
+  }
+
   return roasts;
 }
 
@@ -130,6 +147,7 @@ export async function loader() {
 const categoryColors: Record<string, string> = {
   "GW Winner": "#15803D",
   "GW Flop": "#B91C1C",
+  "Bench Burner": "#D97706",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
