@@ -12,6 +12,8 @@ interface ManagerGWData {
   benchPoints: number;
   transfersCost: number;
   transfers: number;
+  bank: number;
+  value: number;
 }
 
 interface GWRoast {
@@ -39,6 +41,8 @@ function buildManagerGWData(
       points_on_bench: number;
       event_transfers_cost: number;
       event_transfers: number;
+      bank: number;
+      value: number;
     }>;
   }>,
   gw: number
@@ -57,6 +61,8 @@ function buildManagerGWData(
         benchPoints: gwData.points_on_bench,
         transfersCost: gwData.event_transfers_cost,
         transfers: gwData.event_transfers,
+        bank: gwData.bank,
+        value: gwData.value,
       };
     })
     .filter((m): m is ManagerGWData => m !== null);
@@ -171,6 +177,21 @@ function generateGWRoasts(
     }
   }
 
+  // GW5: Tightwad Trophy — hoarding money in the bank
+  const richest = [...players].sort((a, b) => b.bank - a.bank)[0];
+  if (richest && richest.bank >= 5) {
+    const bankMil = (richest.bank / 10).toFixed(1);
+    roasts.push({
+      target: richest.name,
+      category: "Tightwad Trophy",
+      headline: `${richest.name} hoards £${bankMil}m in the bank like a dragon`,
+      body:
+        richest.points < (sorted[Math.floor(sorted.length / 2)]?.points ?? 0)
+          ? `${richest.name} is sitting on £${bankMil}m in the bank while scoring below average. You're not saving for a rainy day, it's already pouring. Spend the money — it doesn't earn interest.`
+          : `${richest.name} has £${bankMil}m gathering dust in the FPL bank in GW${gw}. That's not financial discipline, that's fear of commitment. The money is there to be spent, not admired.`,
+    });
+  }
+
   // GW2: Transfer Addict — managers who took hits
   const hitTakers = [...players]
     .filter((p) => p.transfersCost > 0)
@@ -235,6 +256,7 @@ const categoryColors: Record<string, string> = {
   "Transfer Addict": "#7C3AED",
   "Rank Freefall": "#0891B2",
   "Mid-Table Mediocrity": "#6B7280",
+  "Tightwad Trophy": "#15803D",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
