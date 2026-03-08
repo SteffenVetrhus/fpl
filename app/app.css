@@ -70,6 +70,9 @@
   --color-page-chip-planner: #D97706;
   --color-page-chip-planner-light: #F59E0B;
   --color-page-chip-planner-dark: #92400E;
+  --color-page-planner: #4F46E5;
+  --color-page-planner-light: #6366F1;
+  --color-page-planner-dark: #3730A3;
 }
 
 /* Base styles */

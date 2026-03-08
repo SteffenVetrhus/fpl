@@ -6,6 +6,7 @@ export default [
   route("standings", "routes/standings.tsx"),
   route("transfers", "routes/transfers.tsx"),
   // Decision Tools
+  route("transfer-planner", "routes/transfer-planner.tsx"),
   route("fixtures", "routes/fixtures.tsx"),
   route("captain-picker", "routes/captain-picker.tsx"),
   route("transfer-hub", "routes/transfer-hub.tsx"),
