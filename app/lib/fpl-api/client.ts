@@ -9,6 +9,7 @@ import type {
   FPLManagerHistory,
   FPLManagerTransfers,
   FPLEntry,
+  FPLGameweekPicks,
 } from "./types";
 
 const API_BASE_URL = "https://fantasy.premierleague.com/api";
@@ -172,5 +173,38 @@ export async function fetchManagerTransfers(
       throw error;
     }
     throw new Error("Unknown error fetching manager transfers");
+  }
+}
+
+/**
+ * Fetch manager's picks for a specific gameweek
+ * Returns captain, team selection, and auto-subs
+ *
+ * @param managerId - The FPL manager/entry ID
+ * @param gameweek - The gameweek number
+ * @returns Promise resolving to gameweek picks data
+ * @throws Error if fetch fails or data not found
+ */
+export async function fetchGameweekPicks(
+  managerId: string,
+  gameweek: number
+): Promise<FPLGameweekPicks> {
+  const url = `${API_BASE_URL}/entry/${managerId}/event/${gameweek}/picks/`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch gameweek picks: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error fetching gameweek picks");
   }
 }
