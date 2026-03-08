@@ -1,0 +1,54 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://fpl:${DB_PASSWORD:-fplsecret}@postgres:5432/fpl
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./app/lib/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+    environment:
+      POSTGRES_DB: fpl
+      POSTGRES_USER: fpl
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fplsecret}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fpl"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+
+  cron:
+    build:
+      context: .
+      dockerfile: Dockerfile.cron
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://fpl:${DB_PASSWORD:-fplsecret}@postgres:5432/fpl
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:

@@ -10,6 +10,9 @@ import type {
   FPLManagerTransfers,
   FPLEntry,
   FPLGameweekPicks,
+  FPLFixture,
+  FPLElementSummary,
+  FPLLiveGameweek,
 } from "./types";
 
 const API_BASE_URL = "https://fantasy.premierleague.com/api";
@@ -173,6 +176,97 @@ export async function fetchManagerTransfers(
       throw error;
     }
     throw new Error("Unknown error fetching manager transfers");
+  }
+}
+
+/**
+ * Fetch all fixtures for the season, optionally filtered by gameweek
+ *
+ * @param gameweek - Optional gameweek number to filter by
+ * @returns Promise resolving to array of fixtures
+ * @throws Error if fetch fails
+ */
+export async function fetchFixtures(
+  gameweek?: number
+): Promise<FPLFixture[]> {
+  const params = gameweek ? `?event=${gameweek}` : "";
+  const url = `${API_BASE_URL}/fixtures/${params}`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch fixtures: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error fetching fixtures");
+  }
+}
+
+/**
+ * Fetch detailed player summary including upcoming fixtures and past history
+ *
+ * @param playerId - The FPL player/element ID
+ * @returns Promise resolving to player summary data
+ * @throws Error if fetch fails
+ */
+export async function fetchElementSummary(
+  playerId: number
+): Promise<FPLElementSummary> {
+  const url = `${API_BASE_URL}/element-summary/${playerId}/`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch element summary: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error fetching element summary");
+  }
+}
+
+/**
+ * Fetch live gameweek data with real-time player points
+ *
+ * @param gameweek - The gameweek number
+ * @returns Promise resolving to live gameweek data
+ * @throws Error if fetch fails
+ */
+export async function fetchLiveGameweek(
+  gameweek: number
+): Promise<FPLLiveGameweek> {
+  const url = `${API_BASE_URL}/event/${gameweek}/live/`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch live gameweek: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error fetching live gameweek");
   }
 }
 

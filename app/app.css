@@ -50,6 +50,26 @@
   --color-page-roast: #DC2626;
   --color-page-roast-light: #EF4444;
   --color-page-roast-dark: #B91C1C;
+
+  /* Decision Tools */
+  --color-page-fixtures: #0D9488;
+  --color-page-fixtures-light: #14B8A6;
+  --color-page-fixtures-dark: #0F766E;
+  --color-page-captain-pick: #D97706;
+  --color-page-captain-pick-light: #F59E0B;
+  --color-page-captain-pick-dark: #92400E;
+  --color-page-transfer-hub: #0891B2;
+  --color-page-transfer-hub-light: #06B6D4;
+  --color-page-transfer-hub-dark: #0E7490;
+  --color-page-differentials: #7C3AED;
+  --color-page-differentials-light: #8B5CF6;
+  --color-page-differentials-dark: #5B21B6;
+  --color-page-rival-spy: #DC2626;
+  --color-page-rival-spy-light: #EF4444;
+  --color-page-rival-spy-dark: #991B1B;
+  --color-page-chip-planner: #D97706;
+  --color-page-chip-planner-light: #F59E0B;
+  --color-page-chip-planner-dark: #92400E;
 }
 
 /* Base styles */

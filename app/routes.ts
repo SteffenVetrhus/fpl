@@ -5,6 +5,17 @@ export default [
   route("gameweeks", "routes/gameweeks.tsx"),
   route("standings", "routes/standings.tsx"),
   route("transfers", "routes/transfers.tsx"),
+  // Decision Tools
+  route("fixtures", "routes/fixtures.tsx"),
+  route("captain-picker", "routes/captain-picker.tsx"),
+  route("transfer-hub", "routes/transfer-hub.tsx"),
+  route("differentials", "routes/differentials.tsx"),
+  route("rival-spy", "routes/rival-spy.tsx"),
+  route("chip-planner", "routes/chip-planner.tsx"),
+  route("price-tracker", "routes/price-tracker.tsx"),
+  route("ai-advisor", "routes/ai-advisor.tsx"),
+
+  // Banter Zone
   route("bench-shame", "routes/bench-shame.tsx"),
   route("captain-hindsight", "routes/captain-hindsight.tsx"),
   route("transfer-clowns", "routes/transfer-clowns.tsx"),

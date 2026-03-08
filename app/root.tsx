@@ -28,6 +28,14 @@ import {
   Bot,
   BookOpen,
   Flame,
+  Calendar,
+  Target,
+  ArrowRightLeft,
+  Gem,
+  Crosshair,
+  Zap,
+  DollarSign,
+  Brain,
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -50,6 +58,17 @@ const coreNavItems = [
   { to: "/gameweeks", label: "Gameweeks", icon: CalendarDays, end: false, color: "#1D4ED8" },
   { to: "/standings", label: "Standings", icon: BarChart3, end: false, color: "#059669" },
   { to: "/transfers", label: "Transfers", icon: ArrowLeftRight, end: false, color: "#EA580C" },
+];
+
+const toolNavItems = [
+  { to: "/fixtures", label: "Fixture Ticker", icon: Calendar, end: false, color: "#0D9488" },
+  { to: "/captain-picker", label: "Captain Picker", icon: Target, end: false, color: "#D97706" },
+  { to: "/transfer-hub", label: "Transfer Hub", icon: ArrowRightLeft, end: false, color: "#0891B2" },
+  { to: "/differentials", label: "Differentials", icon: Gem, end: false, color: "#7C3AED" },
+  { to: "/rival-spy", label: "Rival Spy", icon: Crosshair, end: false, color: "#DC2626" },
+  { to: "/chip-planner", label: "Chip Planner", icon: Zap, end: false, color: "#D97706" },
+  { to: "/price-tracker", label: "Price Tracker", icon: DollarSign, end: false, color: "#059669" },
+  { to: "/ai-advisor", label: "AI Advisor", icon: Brain, end: false, color: "#4338CA" },
 ];
 
 const banterNavItems = [
@@ -134,6 +153,34 @@ function HamburgerMenu() {
                       style={{ background: item.color }}
                     >
                       <item.icon size={16} color="white" />
+                    </div>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+
+              {/* Decision Tools */}
+              <div className="p-4 border-t border-white/10">
+                <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
+                {toolNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    viewTransition
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                        isActive
+                          ? "bg-white/15 text-white"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`
+                    }
+                  >
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center"
+                      style={{ background: item.color }}
+                    >
+                      <item.icon size={14} color="white" />
                     </div>
                     {item.label}
                   </NavLink>
