@@ -10,6 +10,7 @@ services:
       - API_CACHE_DURATION=${API_CACHE_DURATION:-300}
       - FPL_MANAGER_ID=${FPL_MANAGER_ID:-}
       - POCKETBASE_URL=http://pocketbase:8090
+      - POCKETBASE_PUBLIC_URL=${POCKETBASE_PUBLIC_URL:-http://localhost:8090}
     depends_on:
       pocketbase:
         condition: service_healthy

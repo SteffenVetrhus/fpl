@@ -8,6 +8,7 @@ export interface EnvConfig {
   cacheDuration: number;
   fplManagerId?: string;
   pocketbaseUrl: string;
+  pocketbasePublicUrl: string;
 }
 
 /**
@@ -30,5 +31,7 @@ export function getEnvConfig(): EnvConfig {
     fplManagerId: process.env.FPL_MANAGER_ID,
     pocketbaseUrl:
       process.env.POCKETBASE_URL || "http://localhost:8090",
+    pocketbasePublicUrl:
+      process.env.POCKETBASE_PUBLIC_URL || process.env.POCKETBASE_URL || "http://localhost:8090",
   };
 }

@@ -61,7 +61,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     user,
     ENV: {
-      POCKETBASE_URL: config.pocketbaseUrl,
+      POCKETBASE_URL: config.pocketbasePublicUrl,
     },
   };
 }
