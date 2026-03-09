@@ -11,6 +11,7 @@ export interface EnvConfig {
   newsCacheDuration: number;
   twitterApiKey: string | undefined;
   twitterApiBaseUrl: string;
+  plausibleDomain: string | undefined;
 }
 
 /**
@@ -38,5 +39,6 @@ export function getEnvConfig(): EnvConfig {
     twitterApiKey: process.env.TWITTER_API_KEY || undefined,
     twitterApiBaseUrl:
       process.env.TWITTER_API_BASE_URL || "https://api.sociavault.com/v1",
+    plausibleDomain: process.env.PLAUSIBLE_DOMAIN || undefined,
   };
 }
