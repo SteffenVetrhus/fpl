@@ -3,12 +3,13 @@ import {
   buildSquadFromPicks,
   applyPlanToSquad,
   calculateHitCost,
+  calculateFreeTransfers,
   validateSquad,
   getPositionLabel,
   groupByPosition,
 } from "./transfer-planner";
 import type { SquadPlayer, PlannerSquad } from "./transfer-planner";
-import type { FPLElement, FPLPick } from "~/lib/fpl-api/types";
+import type { FPLElement, FPLPick, FPLManagerGameweek, FPLChip } from "~/lib/fpl-api/types";
 import type { GameweekPlan } from "./transfer-planner";
 
 function makeElement(overrides: Partial<FPLElement> = {}): FPLElement {
@@ -94,6 +95,121 @@ function makeSquadPlayer(overrides: Partial<SquadPlayer> = {}): SquadPlayer {
   };
 }
 
+function makeGameweek(overrides: Partial<FPLManagerGameweek> = {}): FPLManagerGameweek {
+  return {
+    event: 1,
+    points: 50,
+    total_points: 50,
+    rank: 1000,
+    rank_sort: 1000,
+    overall_rank: 1000,
+    bank: 0,
+    value: 1000,
+    event_transfers: 0,
+    event_transfers_cost: 0,
+    points_on_bench: 0,
+    ...overrides,
+  };
+}
+
+describe("calculateFreeTransfers", () => {
+  it("returns 1 for gameweek 1 with no transfers", () => {
+    // After GW1 plays, you have 1 unused + 1 new = 2 for next GW
+    // But the function returns the state AFTER all gameweeks
+    const gws = [makeGameweek({ event: 1 })];
+    expect(calculateFreeTransfers(gws, [])).toBe(2);
+  });
+
+  it("accumulates free transfers when none are used", () => {
+    const gws = [
+      makeGameweek({ event: 1 }),
+      makeGameweek({ event: 2 }),
+      makeGameweek({ event: 3 }),
+    ];
+    // GW1: start 1, use 0 -> min(5, 1-0+1) = 2
+    // GW2: start 2, use 0 -> min(5, 2-0+1) = 3
+    // GW3: start 3, use 0 -> min(5, 3-0+1) = 4
+    expect(calculateFreeTransfers(gws, [])).toBe(4);
+  });
+
+  it("caps at 5 free transfers", () => {
+    const gws = Array.from({ length: 6 }, (_, i) =>
+      makeGameweek({ event: i + 1 })
+    );
+    // GW1->2, GW2->3, GW3->4, GW4->5, GW5->5 (capped), GW6->5 (capped)
+    expect(calculateFreeTransfers(gws, [])).toBe(5);
+  });
+
+  it("deducts used free transfers", () => {
+    const gws = [
+      makeGameweek({ event: 1 }),
+      makeGameweek({ event: 2 }),
+      makeGameweek({ event: 3, event_transfers: 2, event_transfers_cost: 0 }),
+    ];
+    // GW1: 1->2, GW2: 2->3, GW3: start 3, use 2 free -> min(5, 3-2+1) = 2
+    expect(calculateFreeTransfers(gws, [])).toBe(2);
+  });
+
+  it("handles hits (paid transfers) correctly", () => {
+    const gws = [
+      makeGameweek({ event: 1, event_transfers: 3, event_transfers_cost: 8 }),
+    ];
+    // 3 transfers, 8 cost = 2 paid, so 1 free used
+    // min(5, 1-1+1) = 1
+    expect(calculateFreeTransfers(gws, [])).toBe(1);
+  });
+
+  it("resets to 1 after wildcard", () => {
+    const gws = [
+      makeGameweek({ event: 1 }),
+      makeGameweek({ event: 2 }),
+      makeGameweek({ event: 3, event_transfers: 5, event_transfers_cost: 0 }),
+    ];
+    const chips: FPLChip[] = [
+      { name: "wildcard", time: "2025-01-01", event: 3 },
+    ];
+    // GW1: 1->2, GW2: 2->3, GW3: wildcard -> reset to 1
+    expect(calculateFreeTransfers(gws, chips)).toBe(1);
+  });
+
+  it("resets to 1 after free hit", () => {
+    const gws = [
+      makeGameweek({ event: 1 }),
+      makeGameweek({ event: 2 }),
+      makeGameweek({ event: 3, event_transfers: 10, event_transfers_cost: 0 }),
+    ];
+    const chips: FPLChip[] = [
+      { name: "freehit", time: "2025-01-01", event: 3 },
+    ];
+    expect(calculateFreeTransfers(gws, chips)).toBe(1);
+  });
+
+  it("does not reset for non-transfer chips like bench boost", () => {
+    const gws = [
+      makeGameweek({ event: 1 }),
+      makeGameweek({ event: 2 }),
+    ];
+    const chips: FPLChip[] = [
+      { name: "bboost", time: "2025-01-01", event: 2 },
+    ];
+    // GW1: 1->2, GW2: 2->3 (bench boost doesn't reset)
+    expect(calculateFreeTransfers(gws, chips)).toBe(3);
+  });
+
+  it("returns 1 for empty history", () => {
+    expect(calculateFreeTransfers([], [])).toBe(1);
+  });
+
+  it("never drops below 1", () => {
+    const gws = [
+      makeGameweek({ event: 1, event_transfers: 4, event_transfers_cost: 12 }),
+    ];
+    // 4 transfers, 12 cost = 3 paid, 1 free used
+    // min(5, 1-1+1) = 1
+    expect(calculateFreeTransfers(gws, [])).toBe(1);
+  });
+});
+
 describe("buildSquadFromPicks", () => {
   it("builds a squad from picks and elements", () => {
     const picks = [
@@ -115,6 +231,19 @@ describe("buildSquadFromPicks", () => {
     expect(squad.players[1].isViceCaptain).toBe(true);
     expect(squad.players[1].cost).toBe(14.5);
     expect(squad.bank).toBe(0.5);
+    expect(squad.freeTransfers).toBe(1);
+  });
+
+  it("uses provided freeTransfers value", () => {
+    const picks = [
+      makePick({ element: 10, position: 1 }),
+    ];
+    const elements = [
+      makeElement({ id: 10, now_cost: 80 }),
+    ];
+
+    const squad = buildSquadFromPicks(picks, elements, 5, 4);
+    expect(squad.freeTransfers).toBe(4);
   });
 });
 

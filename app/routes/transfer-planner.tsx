@@ -24,6 +24,7 @@ import {
   fetchFixtures,
   fetchGameweekPicks,
   fetchManagerEntry,
+  fetchManagerHistory,
   fetchLeagueStandings,
 } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
@@ -32,6 +33,7 @@ import {
   buildSquadFromPicks,
   applyPlanToSquad,
   calculateHitCost,
+  calculateFreeTransfers,
   validateSquad,
   getPositionLabel,
   groupByPosition,
@@ -96,10 +98,11 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
   const managerId = user.fplManagerId.toString();
 
   try {
-    const [bootstrap, allFixtures, entry] = await Promise.all([
+    const [bootstrap, allFixtures, entry, managerHistory] = await Promise.all([
       fetchBootstrapStatic(),
       fetchFixtures(),
       fetchManagerEntry(managerId),
+      fetchManagerHistory(managerId),
     ]);
 
     const currentEvent = bootstrap.events.find((e) => e.is_current);
@@ -109,10 +112,16 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
 
     const picks = await fetchGameweekPicks(managerId, picksGW);
 
+    const freeTransfers = calculateFreeTransfers(
+      managerHistory.current,
+      managerHistory.chips
+    );
+
     const initialSquad = buildSquadFromPicks(
       picks.picks,
       bootstrap.elements,
-      picks.entry_history.bank
+      picks.entry_history.bank,
+      freeTransfers
     );
 
     // Build player lookup

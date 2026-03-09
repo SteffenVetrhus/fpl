@@ -3,7 +3,7 @@
  * Handles squad validation, budget tracking, and plan application
  */
 
-import type { FPLElement, FPLPick } from "~/lib/fpl-api/types";
+import type { FPLElement, FPLPick, FPLChip, FPLManagerGameweek } from "~/lib/fpl-api/types";
 
 export interface PlannedTransfer {
   elementIn: number;
@@ -44,12 +44,49 @@ export interface PlannerSquad {
 }
 
 /**
+ * Calculate free transfers from manager history
+ * Walks through every gameweek to reconstruct the running balance.
+ * FPL rules: start at 1, gain 1 per GW (unused roll over), capped at 5.
+ * Wildcard or free hit resets to 1.
+ */
+export function calculateFreeTransfers(
+  gameweeks: FPLManagerGameweek[],
+  chips: FPLChip[]
+): number {
+  const chipEvents = new Set(
+    chips
+      .filter((c) => c.name === "wildcard" || c.name === "freehit")
+      .map((c) => c.event)
+  );
+
+  let freeTransfers = 1;
+
+  for (const gw of gameweeks) {
+    if (chipEvents.has(gw.event)) {
+      freeTransfers = 1;
+      continue;
+    }
+
+    const transfersMade = gw.event_transfers;
+    const hitCost = gw.event_transfers_cost;
+    const paidTransfers = hitCost / 4;
+    const freeUsed = transfersMade - paidTransfers;
+
+    freeTransfers = Math.min(5, freeTransfers - freeUsed + 1);
+    freeTransfers = Math.max(1, freeTransfers);
+  }
+
+  return freeTransfers;
+}
+
+/**
  * Build the initial squad from FPL API picks data
  */
 export function buildSquadFromPicks(
   picks: FPLPick[],
   elements: FPLElement[],
-  bank: number
+  bank: number,
+  freeTransfers?: number
 ): PlannerSquad {
   const elementMap = new Map(elements.map((e) => [e.id, e]));
 
@@ -72,7 +109,7 @@ export function buildSquadFromPicks(
 
   const totalValue = players.reduce((sum, p) => sum + p.cost, 0) + bank / 10;
 
-  return { players, bank: bank / 10, freeTransfers: 1, totalValue };
+  return { players, bank: bank / 10, freeTransfers: freeTransfers ?? 1, totalValue };
 }
 
 /**
