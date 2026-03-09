@@ -41,6 +41,7 @@ import {
   DollarSign,
   Brain,
   ClipboardList,
+  Newspaper,
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -96,6 +97,7 @@ const toolNavItems = [
   { to: "/chip-planner", label: "Chip Planner", icon: Zap, end: false, color: "#D97706" },
   { to: "/price-tracker", label: "Price Tracker", icon: DollarSign, end: false, color: "#059669" },
   { to: "/ai-advisor", label: "AI Advisor", icon: Brain, end: false, color: "#4338CA" },
+  { to: "/news", label: "FPL News", icon: Newspaper, end: false, color: "#0891B2" },
 ];
 
 const banterNavItems = [

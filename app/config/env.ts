@@ -8,6 +8,9 @@ export interface EnvConfig {
   cacheDuration: number;
   pocketbaseUrl: string;
   pocketbasePublicUrl: string;
+  newsCacheDuration: number;
+  twitterApiKey: string | undefined;
+  twitterApiBaseUrl: string;
 }
 
 /**
@@ -31,5 +34,9 @@ export function getEnvConfig(): EnvConfig {
       process.env.POCKETBASE_URL || "http://localhost:8090",
     pocketbasePublicUrl:
       process.env.POCKETBASE_PUBLIC_URL || process.env.POCKETBASE_URL || "http://localhost:8090",
+    newsCacheDuration: parseInt(process.env.NEWS_CACHE_DURATION || "900", 10),
+    twitterApiKey: process.env.TWITTER_API_KEY || undefined,
+    twitterApiBaseUrl:
+      process.env.TWITTER_API_BASE_URL || "https://api.sociavault.com/v1",
   };
 }
