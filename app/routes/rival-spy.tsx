@@ -20,7 +20,7 @@ interface ManagerPicks {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
   const [bootstrap, fixtures, league] = await Promise.all([
     fetchBootstrapStatic(),
@@ -78,9 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     })),
     comparisons,
     nextGW,
-    defaultManagerId: config.fplManagerId
-      ? parseInt(config.fplManagerId)
-      : allManagerPicks[0]?.managerId ?? 0,
+    defaultManagerId: user.fplManagerId || allManagerPicks[0]?.managerId || 0,
   };
 }
 

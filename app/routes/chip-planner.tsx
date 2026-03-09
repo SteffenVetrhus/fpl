@@ -16,7 +16,7 @@ import {
 import { Sparkles, Check, Clock, Users } from "lucide-react";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
   const [bootstrap, fixtures, league] = await Promise.all([
     fetchBootstrapStatic(),
@@ -41,10 +41,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     })
   );
 
-  // Find the configured manager's chips, or the first manager
-  const targetManagerId = config.fplManagerId
-    ? parseInt(config.fplManagerId)
-    : league.standings.results[0]?.entry;
+  // Find the logged-in user's chips, or the first manager
+  const targetManagerId = user.fplManagerId || league.standings.results[0]?.entry;
   const myData = managersData.find((m) => m.managerId === targetManagerId) ?? managersData[0];
 
   const chipStatuses = getChipStatuses(myData?.chips ?? []);

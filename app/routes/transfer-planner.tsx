@@ -83,7 +83,6 @@ interface LoaderData {
   events: { id: number; name: string; deadlineTime: string }[];
   managerName: string | null;
   teamName: string | null;
-  noManagerId: boolean;
   error: string | null;
 }
 
@@ -92,30 +91,15 @@ interface LoaderData {
 // ============================================================================
 
 export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
-  await requireAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
-
-  if (!config.fplManagerId) {
-    return {
-      initialSquad: null,
-      allPlayers: [],
-      teams: [],
-      fixturesByTeam: {},
-      upcomingGWs: [],
-      currentGW: 1,
-      events: [],
-      managerName: null,
-      teamName: null,
-      noManagerId: true,
-      error: null,
-    };
-  }
+  const managerId = user.fplManagerId.toString();
 
   try {
     const [bootstrap, allFixtures, entry] = await Promise.all([
       fetchBootstrapStatic(),
       fetchFixtures(),
-      fetchManagerEntry(config.fplManagerId),
+      fetchManagerEntry(managerId),
     ]);
 
     const currentEvent = bootstrap.events.find((e) => e.is_current);
@@ -123,7 +107,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     const currentGW = currentEvent?.id ?? nextEvent?.id ?? 1;
     const picksGW = currentEvent?.id ?? 1;
 
-    const picks = await fetchGameweekPicks(config.fplManagerId, picksGW);
+    const picks = await fetchGameweekPicks(managerId, picksGW);
 
     const initialSquad = buildSquadFromPicks(
       picks.picks,
@@ -208,7 +192,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     try {
       const leagueData = await fetchLeagueStandings(config.fplLeagueId);
       const manager = leagueData.standings.results.find(
-        (m) => m.entry.toString() === config.fplManagerId
+        (m) => m.entry.toString() === managerId
       );
       managerName =
         manager?.player_name ??
@@ -229,7 +213,6 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       events,
       managerName,
       teamName,
-      noManagerId: false,
       error: null,
     };
   } catch (err) {
@@ -243,7 +226,6 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       events: [],
       managerName: null,
       teamName: null,
-      noManagerId: false,
       error:
         err instanceof Error ? err.message : "Failed to load planner data",
     };
@@ -661,7 +643,6 @@ export default function TransferPlannerPage({
     events,
     managerName,
     teamName,
-    noManagerId,
     error,
   } = loaderData;
 
@@ -1023,34 +1004,6 @@ export default function TransferPlannerPage({
 
       {/* Content */}
       <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-24 sm:pb-16 space-y-4">
-        {/* No Manager ID */}
-        {noManagerId && (
-          <div
-            className="kit-card p-6 md:p-8 kit-animate-slide-up"
-            style={{ "--delay": "200ms" } as React.CSSProperties}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <ClipboardList className="w-6 h-6 text-indigo-600" />
-              <h2 className="kit-headline text-2xl text-gray-900">
-                Setup Required
-              </h2>
-            </div>
-            <p className="text-gray-600 mb-4">
-              Set the{" "}
-              <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                FPL_MANAGER_ID
-              </code>{" "}
-              environment variable to load your squad into the Transfer Planner.
-            </p>
-            <p className="text-gray-500 text-sm">
-              Find your manager ID in the URL when viewing your team:
-              <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono ml-1">
-                fantasy.premierleague.com/entry/<strong>YOUR_ID</strong>/event/1
-              </code>
-            </p>
-          </div>
-        )}
-
         {/* Error */}
         {error && (
           <div

@@ -24,32 +24,20 @@ interface LoaderData {
   bank: number;
   sellCandidates: SellCandidate[];
   suggestions: TransferSuggestion[];
-  noManagerId: boolean;
   error: string | null;
 }
 
 export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
-  await requireAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
-
-  if (!config.fplManagerId) {
-    return {
-      managerName: null,
-      teamName: null,
-      bank: 0,
-      sellCandidates: [],
-      suggestions: [],
-      noManagerId: true,
-      error: null,
-    };
-  }
+  const managerId = user.fplManagerId.toString();
 
   try {
     const [leagueData, bootstrap, fixtures, entry] = await Promise.all([
       fetchLeagueStandings(config.fplLeagueId),
       fetchBootstrapStatic(),
       fetchFixtures(),
-      fetchManagerEntry(config.fplManagerId),
+      fetchManagerEntry(managerId),
     ]);
 
     const currentEvent = bootstrap.events.find((e) => e.is_current);
@@ -57,7 +45,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     const nextGW = nextEvent?.id ?? (currentEvent ? currentEvent.id + 1 : 1);
     const picksGW = currentEvent?.id ?? 1;
 
-    const picks = await fetchGameweekPicks(config.fplManagerId, picksGW);
+    const picks = await fetchGameweekPicks(managerId, picksGW);
 
     const sellCandidates = identifySellCandidates(
       picks.picks,
@@ -77,7 +65,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     );
 
     const manager = leagueData.standings.results.find(
-      (m) => m.entry.toString() === config.fplManagerId
+      (m) => m.entry.toString() === managerId
     );
 
     return {
@@ -86,7 +74,6 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       bank: picks.entry_history.bank / 10,
       sellCandidates,
       suggestions,
-      noManagerId: false,
       error: null,
     };
   } catch (err) {
@@ -96,7 +83,6 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       bank: 0,
       sellCandidates: [],
       suggestions: [],
-      noManagerId: false,
       error: err instanceof Error ? err.message : "Failed to load transfer data",
     };
   }
@@ -134,7 +120,6 @@ export default function TransferHubPage({ loaderData }: Route.ComponentProps) {
     bank,
     sellCandidates,
     suggestions,
-    noManagerId,
     error,
   } = loaderData;
 
@@ -159,31 +144,6 @@ export default function TransferHubPage({ loaderData }: Route.ComponentProps) {
 
       {/* Content */}
       <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-24 sm:pb-16">
-        {/* No Manager ID Message */}
-        {noManagerId && (
-          <div
-            className="kit-card p-6 md:p-8 kit-animate-slide-up"
-            style={{ "--delay": "200ms" } as React.CSSProperties}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <ArrowRightLeft className="w-6 h-6 text-cyan-600" />
-              <h2 className="kit-headline text-2xl text-gray-900">
-                Setup Required
-              </h2>
-            </div>
-            <p className="text-gray-600 mb-4">
-              Set the <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">FPL_MANAGER_ID</code> environment
-              variable to your FPL manager ID to get personalised transfer recommendations.
-            </p>
-            <p className="text-gray-500 text-sm">
-              You can find your manager ID in the URL when viewing your team on the FPL website:
-              <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono ml-1">
-                fantasy.premierleague.com/entry/<strong>YOUR_ID</strong>/event/1
-              </code>
-            </p>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div
@@ -223,9 +183,6 @@ export default function TransferHubPage({ loaderData }: Route.ComponentProps) {
                 </span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-4 ml-9">
-              Showing recommendations for the default manager. Set <code className="bg-gray-100 px-1 py-0.5 rounded font-mono">FPL_MANAGER_ID</code> in your environment to change.
-            </p>
           </div>
         )}
 
