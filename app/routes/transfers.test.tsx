@@ -6,7 +6,16 @@ import type { FPLLeagueStandings, FPLManagerTransfers } from "~/lib/fpl-api/type
 
 vi.mock("~/lib/fpl-api/client");
 vi.mock("~/config/env", () => ({
-  getEnvConfig: () => ({ fplLeagueId: "1313411" }),
+  getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
+}));
+vi.mock("~/lib/pocketbase/auth", () => ({
+  getOptionalAuth: vi.fn().mockResolvedValue({
+    id: "user1",
+    email: "alice@fpl.local",
+    fplManagerId: 123456,
+    playerName: "Alice Johnson",
+    teamName: "Alice's Aces",
+  }),
 }));
 
 describe("Transfers Route", () => {
@@ -81,8 +90,9 @@ describe("Transfers Route", () => {
       [
         {
           path: "/transfers",
-          Component: Transfers,
+          Component: Transfers as any,
           loader: () => ({
+            currentPlayerName: "Alice Johnson",
             transferSummary: [
               { managerName: "Alice Johnson", teamName: "Alice's Aces", transferCount: 2, lastTransferGW: 6 },
               { managerName: "Bob Smith", teamName: "Bob's Bangers", transferCount: 5, lastTransferGW: 8 },
@@ -105,8 +115,9 @@ describe("Transfers Route", () => {
       [
         {
           path: "/transfers",
-          Component: Transfers,
+          Component: Transfers as any,
           loader: () => ({
+            currentPlayerName: "Alice Johnson",
             transferSummary: [
               { managerName: "Alice Johnson", teamName: "Alice's Aces", transferCount: 2, lastTransferGW: 6 },
               { managerName: "Bob Smith", teamName: "Bob's Bangers", transferCount: 5, lastTransferGW: 8 },
@@ -130,8 +141,9 @@ describe("Transfers Route", () => {
       [
         {
           path: "/transfers",
-          Component: Transfers,
+          Component: Transfers as any,
           loader: () => ({
+            currentPlayerName: "Alice Johnson",
             transferSummary: [
               { managerName: "Alice Johnson", teamName: "Alice's Aces", transferCount: 2, lastTransferGW: 6 },
             ],
@@ -157,7 +169,8 @@ describe("Transfers Route", () => {
     vi.mocked(fetchLeagueStandings).mockResolvedValue(mockLeagueData);
     vi.mocked(fetchManagerTransfers).mockResolvedValue(mockTransfers);
 
-    const result = await loader();
+    const request = new Request("http://localhost:3000/transfers");
+    const result = await loader({ request, params: {}, context: {} } as any);
 
     expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
     expect(fetchManagerTransfers).toHaveBeenCalledWith("123456");

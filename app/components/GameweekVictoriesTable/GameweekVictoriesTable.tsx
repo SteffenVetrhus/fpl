@@ -3,6 +3,7 @@ import { calculateGameweekWinner, type ManagerGameweekData } from "~/utils/gamew
 interface GameweekVictoriesTableProps {
   managers: ManagerGameweekData[];
   onSelectPlayer: (name: string) => void;
+  currentPlayerName?: string;
 }
 
 interface ManagerVictoryRecord {
@@ -47,6 +48,7 @@ export function calculateVictoryRecords(
 export function GameweekVictoriesTable({
   managers,
   onSelectPlayer,
+  currentPlayerName,
 }: GameweekVictoriesTableProps) {
   const records = calculateVictoryRecords(managers);
 
@@ -100,11 +102,17 @@ export function GameweekVictoriesTable({
                   ? (record.victories / maxVictories) * 100
                   : 0;
 
+              const isCurrentUser = currentPlayerName !== undefined && record.name === currentPlayerName;
+
               return (
                 <tr
                   key={record.name}
                   onClick={() => onSelectPlayer(record.name)}
-                  className="kit-table-row border-b border-gray-100 cursor-pointer transition-colors hover:bg-blue-50"
+                  className={`kit-table-row border-b border-gray-100 cursor-pointer transition-colors ${
+                    isCurrentUser
+                      ? "bg-purple-50 border-l-4 border-l-purple-500 hover:bg-purple-100"
+                      : "hover:bg-blue-50"
+                  }`}
                   role="link"
                   tabIndex={0}
                   onKeyDown={(e) => {

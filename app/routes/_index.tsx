@@ -1,13 +1,15 @@
 import { useLoaderData } from "react-router";
 import { fetchLeagueStandings } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { LeagueTable } from "~/components/LeagueTable/LeagueTable";
 import type { Route } from "./+types/_index";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const data = await fetchLeagueStandings(config.fplLeagueId);
-  return data;
+  return { ...data, currentManagerId: user?.fplManagerId };
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
@@ -31,7 +33,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
       {/* Content — white island */}
       <main className="relative z-10 max-w-5xl mx-auto px-4 -mt-8 pb-16">
-        <LeagueTable standings={data.standings.results} />
+        <LeagueTable standings={data.standings.results} currentManagerId={data.currentManagerId} />
       </main>
 
       {/* Footer */}

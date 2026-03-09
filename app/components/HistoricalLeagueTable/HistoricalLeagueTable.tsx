@@ -2,9 +2,10 @@ import type { GameweekLeagueData } from "~/utils/historical-standings";
 
 interface HistoricalLeagueTableProps {
   data: GameweekLeagueData;
+  currentPlayerName?: string;
 }
 
-export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
+export function HistoricalLeagueTable({ data, currentPlayerName }: HistoricalLeagueTableProps) {
   if (data.standings.length === 0) {
     return (
       <div className="kit-card p-12 text-center">
@@ -34,8 +35,13 @@ export function HistoricalLeagueTable({ data }: HistoricalLeagueTableProps) {
   };
 
   const getRowClassName = (standing: typeof data.standings[0]) => {
+    const isCurrentUser = currentPlayerName !== undefined && standing.managerName === currentPlayerName;
     const baseClasses =
       "border-b border-gray-100 hover:bg-gray-50 transition-colors";
+
+    if (isCurrentUser) {
+      return `${baseClasses} bg-purple-50 font-semibold border-l-4 border-l-purple-500`;
+    }
 
     if (standing.isGameweekWinner) {
       return `${baseClasses} bg-yellow-50 border-l-4 border-l-yellow-400`;

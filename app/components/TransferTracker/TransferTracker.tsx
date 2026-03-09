@@ -7,9 +7,10 @@ interface TransferSummary {
 
 interface TransferTrackerProps {
   transfers: TransferSummary[];
+  currentPlayerName?: string;
 }
 
-export function TransferTracker({ transfers }: TransferTrackerProps) {
+export function TransferTracker({ transfers, currentPlayerName }: TransferTrackerProps) {
   if (transfers.length === 0) {
     return (
       <div className="kit-card p-12 text-center">
@@ -29,7 +30,9 @@ export function TransferTracker({ transfers }: TransferTrackerProps) {
     return "Quiet";
   };
 
-  const getActivityColor = (count: number) => {
+  const getActivityColor = (count: number, managerName: string) => {
+    const isCurrentUser = currentPlayerName !== undefined && managerName === currentPlayerName;
+    if (isCurrentUser) return "border-purple-400 bg-purple-50";
     if (count === maxTransfers && count > 5)
       return "border-orange-400 bg-orange-50";
     if (count > 8) return "border-blue-400 bg-blue-50";
@@ -53,7 +56,7 @@ export function TransferTracker({ transfers }: TransferTrackerProps) {
               key={transfer.managerName}
               data-manager={transfer.managerName}
               className={`rounded-xl border-2 p-4 transition-all hover:shadow-md kit-animate-slide-up ${getActivityColor(
-                transfer.transferCount
+                transfer.transferCount, transfer.managerName
               )}`}
               style={{ "--delay": `${index * 60}ms` } as React.CSSProperties}
             >

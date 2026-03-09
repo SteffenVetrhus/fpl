@@ -7,6 +7,7 @@ export interface EnvConfig {
   enableCache: boolean;
   cacheDuration: number;
   fplManagerId?: string;
+  pocketbaseUrl: string;
 }
 
 /**
@@ -27,5 +28,7 @@ export function getEnvConfig(): EnvConfig {
     enableCache: process.env.ENABLE_API_CACHE !== "false", // Default to true
     cacheDuration: parseInt(process.env.API_CACHE_DURATION || "300", 10),
     fplManagerId: process.env.FPL_MANAGER_ID,
+    pocketbaseUrl:
+      process.env.POCKETBASE_URL || "http://localhost:8090",
   };
 }

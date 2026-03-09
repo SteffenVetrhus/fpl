@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, createContext, useContext } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -8,7 +8,11 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
+  useRouteLoaderData,
 } from "react-router";
+import { LogOut, User } from "lucide-react";
+import { getOptionalAuth, type AuthUser } from "~/lib/pocketbase/auth";
+import { getEnvConfig } from "~/config/env";
 
 import {
   Trophy,
@@ -40,6 +44,27 @@ import {
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export interface AuthContext {
+  user: AuthUser | null;
+}
+
+const AuthCtx = createContext<AuthContext>({ user: null });
+
+export function useAuth(): AuthContext {
+  return useContext(AuthCtx);
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const config = getEnvConfig();
+  const user = await getOptionalAuth(request);
+  return {
+    user,
+    ENV: {
+      POCKETBASE_URL: config.pocketbaseUrl,
+    },
+  };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -91,6 +116,7 @@ function HamburgerMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   // Close menu on navigation
   useEffect(() => {
@@ -133,6 +159,38 @@ function HamburgerMenu() {
                 </button>
               </div>
 
+              {/* User info */}
+              {user ? (
+                <div className="p-4 border-b border-white/10">
+                  <div className="flex items-center gap-3 px-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+                      <User size={16} color="white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{user.playerName}</p>
+                      <p className="text-xs text-white/40 truncate">{user.teamName}</p>
+                    </div>
+                    <NavLink
+                      to="/logout"
+                      className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                      aria-label="Sign out"
+                    >
+                      <LogOut size={16} />
+                    </NavLink>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 border-b border-white/10">
+                  <NavLink
+                    to="/login"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all bg-purple-600 hover:bg-purple-500 text-white"
+                  >
+                    <User size={16} />
+                    Sign in for more features
+                  </NavLink>
+                </div>
+              )}
+
               {/* Core navigation */}
               <div className="p-4">
                 <p className="kit-stat-label text-white/40 mb-2 px-3">Core</p>
@@ -161,61 +219,65 @@ function HamburgerMenu() {
                 ))}
               </div>
 
-              {/* Decision Tools */}
-              <div className="p-4 border-t border-white/10">
-                <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
-                {toolNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    viewTransition
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`
-                    }
-                  >
-                    <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center"
-                      style={{ background: item.color }}
+              {/* Decision Tools - only shown when logged in */}
+              {user && (
+                <div className="p-4 border-t border-white/10">
+                  <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
+                  {toolNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      viewTransition
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`
+                      }
                     >
-                      <item.icon size={14} color="white" />
-                    </div>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
+                      <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ background: item.color }}
+                      >
+                        <item.icon size={14} color="white" />
+                      </div>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
 
-              {/* Banter zone */}
-              <div className="p-4 border-t border-white/10">
-                <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
-                {banterNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    viewTransition
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`
-                    }
-                  >
-                    <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center"
-                      style={{ background: item.color }}
+              {/* Banter zone - only shown when logged in */}
+              {user && (
+                <div className="p-4 border-t border-white/10">
+                  <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
+                  {banterNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      viewTransition
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`
+                      }
                     >
-                      <item.icon size={14} color="white" />
-                    </div>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
+                      <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ background: item.color }}
+                      >
+                        <item.icon size={14} color="white" />
+                      </div>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -225,6 +287,10 @@ function HamburgerMenu() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData("root") as { user: AuthUser | null; ENV: { POCKETBASE_URL: string } } | undefined;
+  const user = data?.user ?? null;
+  const env = data?.ENV;
+
   return (
     <html lang="en">
       <head>
@@ -234,8 +300,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <HamburgerMenu />
-        {children}
+        <AuthCtx.Provider value={{ user }}>
+          <HamburgerMenu />
+          {children}
+        </AuthCtx.Provider>
+        {env && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.ENV = ${JSON.stringify(env)}`,
+            }}
+          />
+        )}
         <ScrollRestoration />
         <Scripts />
       </body>

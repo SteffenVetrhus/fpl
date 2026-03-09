@@ -3,6 +3,7 @@ import { useState } from "react";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/head-to-head";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface H2HRecord {
   wins: number;
@@ -23,7 +24,8 @@ interface H2HData {
   closestRivalry: { m1: string; m2: string; record: H2HRecord } | null;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 

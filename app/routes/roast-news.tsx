@@ -1,6 +1,7 @@
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/roast-news";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface ManagerGWData {
   name: string;
@@ -213,7 +214,8 @@ function generateGWRoasts(
   return roasts;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const standings = await fetchLeagueStandings(config.fplLeagueId);
   const results = standings.standings.results;

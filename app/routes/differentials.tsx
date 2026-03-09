@@ -1,4 +1,5 @@
 import type { Route } from "./+types/differentials";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import {
   fetchBootstrapStatic,
   fetchFixtures,
@@ -10,7 +11,8 @@ import { findDifferentials } from "~/utils/differential-score";
 import { getDifficultyColor } from "~/utils/fixture-difficulty";
 import { Gem, TrendingUp, Eye } from "lucide-react";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const [bootstrap, fixtures, league] = await Promise.all([
     fetchBootstrapStatic(),

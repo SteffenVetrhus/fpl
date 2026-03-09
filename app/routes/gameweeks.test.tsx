@@ -6,7 +6,16 @@ import type { FPLManagerHistory, FPLLeagueStandings } from "~/lib/fpl-api/types"
 
 vi.mock("~/lib/fpl-api/client");
 vi.mock("~/config/env", () => ({
-  getEnvConfig: () => ({ fplLeagueId: "1313411" }),
+  getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
+}));
+vi.mock("~/lib/pocketbase/auth", () => ({
+  getOptionalAuth: vi.fn().mockResolvedValue({
+    id: "user1",
+    email: "alice@fpl.local",
+    fplManagerId: 123456,
+    playerName: "Alice Johnson",
+    teamName: "Alice's Aces",
+  }),
 }));
 
 describe("Gameweeks Route", () => {
@@ -82,12 +91,13 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
+          Component: Gameweeks as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -108,8 +118,11 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
-          loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
+          Component: Gameweeks as any,
+          loader: () => ({
+            managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }],
+            currentPlayerName: "Alice Johnson",
+          }),
         },
       ],
       { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
@@ -128,8 +141,11 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
-          loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
+          Component: Gameweeks as any,
+          loader: () => ({
+            managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }],
+            currentPlayerName: "Alice Johnson",
+          }),
         },
       ],
       { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
@@ -147,8 +163,11 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
-          loader: () => ({ managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }] }),
+          Component: Gameweeks as any,
+          loader: () => ({
+            managers: [{ name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current }],
+            currentPlayerName: "Alice Johnson",
+          }),
         },
       ],
       { initialEntries: ["/gameweeks?player=Alice+Johnson"] }
@@ -170,7 +189,8 @@ describe("Gameweeks Route", () => {
     vi.mocked(fetchLeagueStandings).mockResolvedValue(mockLeagueData);
     vi.mocked(fetchManagerHistory).mockResolvedValue(mockHistory);
 
-    const result = await loader();
+    const request = new Request("http://localhost:3000/gameweeks");
+    const result = await loader({ request, params: {}, context: {} } as any);
 
     expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
     expect(fetchManagerHistory).toHaveBeenCalledWith("123456");
@@ -183,12 +203,13 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
+          Component: Gameweeks as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: mockHistory.current },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],
@@ -206,12 +227,13 @@ describe("Gameweeks Route", () => {
       [
         {
           path: "/gameweeks",
-          Component: Gameweeks,
+          Component: Gameweeks as any,
           loader: () => ({
             managers: [
               { name: "Alice Johnson", teamName: "Alice's Aces", gameweeks: [] },
               { name: "Bob Smith", teamName: "Bob's Best", gameweeks: mockHistory.current },
             ],
+            currentPlayerName: "Alice Johnson",
           }),
         },
       ],

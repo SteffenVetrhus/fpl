@@ -11,6 +11,7 @@ import {
   suggestTransfers,
 } from "~/utils/transfer-score";
 import type { Route } from "./+types/transfer-hub";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import type {
   SellCandidate,
   TransferSuggestion,
@@ -27,7 +28,8 @@ interface LoaderData {
   error: string | null;
 }
 
-export async function loader(): Promise<LoaderData> {
+export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
+  await requireAuth(request);
   const config = getEnvConfig();
 
   if (!config.fplManagerId) {

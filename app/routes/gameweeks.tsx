@@ -1,6 +1,7 @@
 import { useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { GameweekHistory } from "~/components/GameweekHistory/GameweekHistory";
 import { GameweekVictoriesTable } from "~/components/GameweekVictoriesTable/GameweekVictoriesTable";
 import { PlayerSelector } from "~/components/PlayerSelector/PlayerSelector";
@@ -8,7 +9,8 @@ import type { Route } from "./+types/gameweeks";
 import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
 import { ArrowLeft } from "lucide-react";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
@@ -23,11 +25,11 @@ export async function loader() {
     })
   );
 
-  return { managers };
+  return { managers, currentPlayerName: user?.playerName };
 }
 
 export default function Gameweeks({ loaderData }: Route.ComponentProps) {
-  const { managers } = useLoaderData<typeof loader>();
+  const { managers, currentPlayerName } = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -104,6 +106,7 @@ export default function Gameweeks({ loaderData }: Route.ComponentProps) {
             <GameweekVictoriesTable
               managers={managers}
               onSelectPlayer={handlePlayerSelect}
+              currentPlayerName={currentPlayerName}
             />
           )}
         </div>

@@ -45,6 +45,7 @@ import type {
   FPLEvent,
 } from "~/lib/fpl-api/types";
 import type { Route } from "./+types/transfer-planner";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 // ============================================================================
 // Types
@@ -90,7 +91,8 @@ interface LoaderData {
 // Loader
 // ============================================================================
 
-export async function loader(): Promise<LoaderData> {
+export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
+  await requireAuth(request);
   const config = getEnvConfig();
 
   if (!config.fplManagerId) {

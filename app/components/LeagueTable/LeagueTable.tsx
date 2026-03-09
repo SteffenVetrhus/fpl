@@ -2,9 +2,10 @@ import type { FPLStandingsResult } from "~/lib/fpl-api/types";
 
 interface LeagueTableProps {
   standings: FPLStandingsResult[];
+  currentManagerId?: number;
 }
 
-export function LeagueTable({ standings }: LeagueTableProps) {
+export function LeagueTable({ standings, currentManagerId }: LeagueTableProps) {
   if (standings.length === 0) {
     return (
       <div className="kit-card p-12 text-center">
@@ -34,9 +35,14 @@ export function LeagueTable({ standings }: LeagueTableProps) {
     return points.toLocaleString();
   };
 
-  const getRowClassName = (index: number) => {
+  const getRowClassName = (index: number, managerId: number) => {
+    const isCurrentUser = currentManagerId !== undefined && managerId === currentManagerId;
     const baseClasses =
       "border-b border-gray-100 hover:bg-gray-50 transition-colors";
+
+    if (isCurrentUser) {
+      return `${baseClasses} bg-purple-50 font-semibold border-l-4 border-l-purple-500`;
+    }
 
     if (index === 0) {
       return `${baseClasses} bg-yellow-50 font-semibold border-l-4 border-l-yellow-400`;
@@ -83,7 +89,7 @@ export function LeagueTable({ standings }: LeagueTableProps) {
             {standings.map((manager, index) => (
               <tr
                 key={manager.entry}
-                className={getRowClassName(index)}
+                className={getRowClassName(index, manager.entry)}
                 style={{ animationDelay: `${200 + index * 50}ms` }}
               >
                 <td className="px-3 sm:px-5 py-4 text-sm">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { GameweekNavigator } from "~/components/GameweekNavigator/GameweekNavigator";
 import { HistoricalLeagueTable } from "~/components/HistoricalLeagueTable/HistoricalLeagueTable";
 import {
@@ -10,7 +11,8 @@ import {
 } from "~/utils/historical-standings";
 import type { Route } from "./+types/standings";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
@@ -25,11 +27,11 @@ export async function loader() {
     })
   );
 
-  return { managers };
+  return { managers, currentPlayerName: user?.playerName };
 }
 
 export default function Standings({ loaderData }: Route.ComponentProps) {
-  const { managers } = useLoaderData<typeof loader>();
+  const { managers, currentPlayerName } = useLoaderData<typeof loader>();
 
   const availableGameweeks = getAvailableGameweeks(managers);
   const mostRecentGameweek =
@@ -94,7 +96,7 @@ export default function Standings({ loaderData }: Route.ComponentProps) {
           availableGameweeks={availableGameweeks}
           onNavigate={handleNavigate}
         />
-        <HistoricalLeagueTable data={standingsData} />
+        <HistoricalLeagueTable data={standingsData} currentPlayerName={currentPlayerName} />
       </main>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Route } from "./+types/rival-spy";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import {
   fetchBootstrapStatic,
   fetchFixtures,
@@ -18,7 +19,8 @@ interface ManagerPicks {
   picks: { element: number; position: number; multiplier: number; is_captain: boolean; is_vice_captain: boolean }[];
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const [bootstrap, fixtures, league] = await Promise.all([
     fetchBootstrapStatic(),

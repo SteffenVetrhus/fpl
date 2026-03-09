@@ -6,6 +6,7 @@ import {
 } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/chip-roast";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface ChipUsage {
   chipName: string;
@@ -42,7 +43,8 @@ const CHIP_EMOJIS: Record<string, string> = {
 
 const ALL_CHIPS = ["wildcard", "bboost", "3xc", "freehit"];
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const [leagueData, bootstrapData] = await Promise.all([
     fetchLeagueStandings(config.fplLeagueId),

@@ -9,9 +9,30 @@ services:
       - ENABLE_API_CACHE=${ENABLE_API_CACHE:-true}
       - API_CACHE_DURATION=${API_CACHE_DURATION:-300}
       - FPL_MANAGER_ID=${FPL_MANAGER_ID:-}
+      - POCKETBASE_URL=http://pocketbase:8090
+    depends_on:
+      pocketbase:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile.pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pb_data:

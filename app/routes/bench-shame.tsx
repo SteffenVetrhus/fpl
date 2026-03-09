@@ -2,6 +2,7 @@ import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/bench-shame";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface BenchData {
   managerName: string;
@@ -13,7 +14,8 @@ interface BenchData {
   couldHaveWonGWs: number;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 

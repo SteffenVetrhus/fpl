@@ -1,4 +1,5 @@
 import type { Route } from "./+types/price-tracker";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import { fetchBootstrapStatic } from "~/lib/fpl-api/client";
 import type { FPLElement } from "~/lib/fpl-api/types";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -37,7 +38,8 @@ function predictPriceChanges(players: FPLElement[]) {
   return { likelyRisers, likelyFallers };
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const bootstrap = await fetchBootstrapStatic();
   const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
 
