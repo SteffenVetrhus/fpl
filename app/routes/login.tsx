@@ -11,8 +11,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     try {
       await pb.collection("users").authRefresh();
       throw redirect("/");
-    } catch {
-      // Token invalid, show login
+    } catch (err) {
+      if (err instanceof Response) throw err;
+      console.log("[login loader] auth refresh failed, showing login", err);
     }
   }
   return {};
@@ -32,7 +33,9 @@ export default function Login() {
 
     try {
       const pb = createBrowserClient();
+      console.log("[login] attempting auth", { email, pbUrl: pb.baseURL });
       await pb.collection("users").authWithPassword(email, password);
+      console.log("[login] auth successful", { userId: pb.authStore.record?.id });
 
       document.cookie = pb.authStore.exportToCookie({
         httpOnly: false,
@@ -42,8 +45,21 @@ export default function Login() {
       }, "pb_auth");
 
       navigate("/");
-    } catch (err) {
-      setError("Invalid email or password. Please try again.");
+    } catch (err: unknown) {
+      const pbErr = err as { status?: number; message?: string; response?: { message?: string } };
+      console.error("[login] auth failed", {
+        status: pbErr.status,
+        message: pbErr.message,
+        response: pbErr.response,
+        raw: err,
+      });
+      if (pbErr.status === 0 || !pbErr.status) {
+        setError("Cannot reach auth server. Check POCKETBASE_URL configuration.");
+      } else if (pbErr.status === 400) {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        setError(`Login failed (${pbErr.status}): ${pbErr.response?.message || pbErr.message || "Unknown error"}`);
+      }
     } finally {
       setIsLoading(false);
     }
