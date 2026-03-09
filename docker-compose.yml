@@ -27,12 +27,9 @@ services:
     ports:
       - "8090:8090"
     volumes:
-      - pb_data:/pb/pb_data
+      - ./pb_data:/pb/pb_data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  pb_data:

@@ -5,3 +5,7 @@
 # React Router
 /.react-router/
 /build/
+
+# PocketBase data & backups
+/pb_data/
+/pb_backups/
