@@ -18,6 +18,7 @@ export default [
   route("chip-planner", "routes/chip-planner.tsx"),
   route("price-tracker", "routes/price-tracker.tsx"),
   route("ai-advisor", "routes/ai-advisor.tsx"),
+  route("news", "routes/news.tsx"),
 
   // Mini Games
   route("mini-games", "routes/mini-games.tsx"),

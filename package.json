@@ -22,7 +22,8 @@
     "pocketbase": "^0.26.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router": "^7.9.2"
+    "react-router": "^7.9.2",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
