@@ -11,7 +11,6 @@ import {
   Star,
   Shield,
   Trash2,
-  Save,
   RotateCcw,
   Search,
   X,
@@ -37,8 +36,7 @@ import {
   getPositionLabel,
   groupByPosition,
 } from "~/utils/transfer-planner";
-import { loadTransferPlan, saveTransferPlan } from "~/lib/db/transfer-plans";
-import type { TransferPlanData, GameweekPlan } from "~/lib/db/transfer-plans";
+import type { TransferPlanData, GameweekPlan } from "~/utils/transfer-planner";
 import type { SquadPlayer, PlannerSquad } from "~/utils/transfer-planner";
 import type {
   FPLElement,
@@ -76,7 +74,6 @@ interface TeamFixtureCell {
 
 interface LoaderData {
   initialSquad: PlannerSquad | null;
-  savedPlan: TransferPlanData | null;
   allPlayers: PlayerInfo[];
   teams: { id: number; name: string; shortName: string }[];
   fixturesByTeam: Record<number, TeamFixtureCell[]>;
@@ -99,7 +96,6 @@ export async function loader(): Promise<LoaderData> {
   if (!config.fplManagerId) {
     return {
       initialSquad: null,
-      savedPlan: null,
       allPlayers: [],
       teams: [],
       fixturesByTeam: {},
@@ -131,11 +127,6 @@ export async function loader(): Promise<LoaderData> {
       picks.picks,
       bootstrap.elements,
       picks.entry_history.bank
-    );
-
-    // Load saved plan from DB
-    const savedPlan = await loadTransferPlan(
-      parseInt(config.fplManagerId, 10)
     );
 
     // Build player lookup
@@ -228,7 +219,6 @@ export async function loader(): Promise<LoaderData> {
 
     return {
       initialSquad,
-      savedPlan,
       allPlayers,
       teams,
       fixturesByTeam,
@@ -243,7 +233,6 @@ export async function loader(): Promise<LoaderData> {
   } catch (err) {
     return {
       initialSquad: null,
-      savedPlan: null,
       allPlayers: [],
       teams: [],
       fixturesByTeam: {},
@@ -255,34 +244,6 @@ export async function loader(): Promise<LoaderData> {
       noManagerId: false,
       error:
         err instanceof Error ? err.message : "Failed to load planner data",
-    };
-  }
-}
-
-// ============================================================================
-// Action (save plan)
-// ============================================================================
-
-export async function action({ request }: Route.ActionArgs) {
-  const config = getEnvConfig();
-  if (!config.fplManagerId) {
-    return { success: false, error: "No manager ID configured" };
-  }
-
-  const formData = await request.formData();
-  const planJson = formData.get("plan");
-  if (typeof planJson !== "string") {
-    return { success: false, error: "Invalid plan data" };
-  }
-
-  try {
-    const planData: TransferPlanData = JSON.parse(planJson);
-    await saveTransferPlan(parseInt(config.fplManagerId, 10), planData);
-    return { success: true, error: null };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to save plan",
     };
   }
 }
@@ -690,7 +651,6 @@ export default function TransferPlannerPage({
 }: Route.ComponentProps) {
   const {
     initialSquad,
-    savedPlan,
     allPlayers,
     teams,
     fixturesByTeam,
@@ -704,15 +664,10 @@ export default function TransferPlannerPage({
   } = loaderData;
 
   // Plan state
-  const [plan, setPlan] = useState<TransferPlanData>(
-    savedPlan ?? { gameweeks: {} }
-  );
+  const [plan, setPlan] = useState<TransferPlanData>({ gameweeks: {} });
   const [activeGWIndex, setActiveGWIndex] = useState(0);
   const [swappingPlayerId, setSwappingPlayerId] = useState<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
   const [showValidation, setShowValidation] = useState(false);
 
   const activeGW = upcomingGWs[activeGWIndex] ?? currentGW + 1;
@@ -951,7 +906,6 @@ export default function TransferPlannerPage({
           },
         },
       }));
-      setSaveStatus("idle");
     },
     [activeGW, currentGWPlan]
   );
@@ -1027,25 +981,8 @@ export default function TransferPlannerPage({
     [updateGWPlan]
   );
 
-  const handleSave = useCallback(async () => {
-    setSaveStatus("saving");
-    try {
-      const form = new FormData();
-      form.set("plan", JSON.stringify(plan));
-      const res = await fetch("/transfer-planner", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      setSaveStatus(data.success ? "saved" : "error");
-    } catch {
-      setSaveStatus("error");
-    }
-  }, [plan]);
-
   const handleReset = useCallback(() => {
     setPlan({ gameweeks: {} });
-    setSaveStatus("idle");
   }, []);
 
   // ===========================================================================
@@ -1554,36 +1491,6 @@ export default function TransferPlannerPage({
                 <RotateCcw size={14} />
                 Reset Plan
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saveStatus === "saving"}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  saveStatus === "saved"
-                    ? "bg-green-500 text-white"
-                    : saveStatus === "error"
-                      ? "bg-red-500 text-white"
-                      : "bg-white text-indigo-700 hover:bg-indigo-50"
-                }`}
-              >
-                {saveStatus === "saving" ? (
-                  <>Saving...</>
-                ) : saveStatus === "saved" ? (
-                  <>
-                    <Check size={14} />
-                    Saved
-                  </>
-                ) : saveStatus === "error" ? (
-                  <>
-                    <AlertTriangle size={14} />
-                    Save Failed
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    Save Plan
-                  </>
-                )}
-              </button>
             </div>
           </>
         )}
@@ -1602,7 +1509,7 @@ export default function TransferPlannerPage({
               &quot;4.5&quot;). Set captaincy with <strong>C</strong>/
               <strong>V</strong> buttons. Activate chips per gameweek. Your bank
               and free transfers update automatically as you plan ahead. Hit
-              &quot;Save Plan&quot; to persist your plan to the database.
+              &quot;Reset Plan&quot; to start over.
             </p>
           </div>
         )}

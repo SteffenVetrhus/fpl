@@ -9,7 +9,7 @@ import {
 } from "./transfer-planner";
 import type { SquadPlayer, PlannerSquad } from "./transfer-planner";
 import type { FPLElement, FPLPick } from "~/lib/fpl-api/types";
-import type { GameweekPlan } from "~/lib/db/transfer-plans";
+import type { GameweekPlan } from "./transfer-planner";
 
 function makeElement(overrides: Partial<FPLElement> = {}): FPLElement {
   return {
