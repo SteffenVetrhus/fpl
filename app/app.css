@@ -73,6 +73,11 @@
   --color-page-planner: #4F46E5;
   --color-page-planner-light: #6366F1;
   --color-page-planner-dark: #3730A3;
+
+  /* Mini Games */
+  --color-page-minigames: #EC4899;
+  --color-page-minigames-light: #F472B6;
+  --color-page-minigames-dark: #BE185D;
 }
 
 /* Base styles */

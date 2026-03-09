@@ -19,6 +19,9 @@ export default [
   route("price-tracker", "routes/price-tracker.tsx"),
   route("ai-advisor", "routes/ai-advisor.tsx"),
 
+  // Mini Games
+  route("mini-games", "routes/mini-games.tsx"),
+
   // Banter Zone
   route("bench-shame", "routes/bench-shame.tsx"),
   route("captain-hindsight", "routes/captain-hindsight.tsx"),
