@@ -6,7 +6,6 @@ export interface EnvConfig {
   apiBaseUrl: string;
   enableCache: boolean;
   cacheDuration: number;
-  fplManagerId?: string;
   pocketbaseUrl: string;
   pocketbasePublicUrl: string;
 }
@@ -28,7 +27,6 @@ export function getEnvConfig(): EnvConfig {
       "https://fantasy.premierleague.com/api",
     enableCache: process.env.ENABLE_API_CACHE !== "false", // Default to true
     cacheDuration: parseInt(process.env.API_CACHE_DURATION || "300", 10),
-    fplManagerId: process.env.FPL_MANAGER_ID,
     pocketbaseUrl:
       process.env.POCKETBASE_URL || "http://localhost:8090",
     pocketbasePublicUrl:

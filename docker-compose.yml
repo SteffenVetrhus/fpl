@@ -8,7 +8,6 @@ services:
       - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
       - ENABLE_API_CACHE=${ENABLE_API_CACHE:-true}
       - API_CACHE_DURATION=${API_CACHE_DURATION:-300}
-      - FPL_MANAGER_ID=${FPL_MANAGER_ID:-}
       - POCKETBASE_URL=http://pocketbase:8090
       - POCKETBASE_PUBLIC_URL=${POCKETBASE_PUBLIC_URL:-http://localhost:8090}
     depends_on:

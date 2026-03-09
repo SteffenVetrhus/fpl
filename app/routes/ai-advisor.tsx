@@ -24,23 +24,21 @@ const POSITION_MAP: Record<number, string> = {
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const user = await requireAuth(request);
   if (!isAdvisorAvailable()) {
     return { available: false as const, error: "ANTHROPIC_API_KEY not set" };
   }
 
   const config = getEnvConfig();
-  if (!config.fplManagerId) {
-    return { available: false as const, error: "FPL_MANAGER_ID not set" };
-  }
+  const managerId = user.fplManagerId.toString();
 
   try {
     const [bootstrap, fixtures, league, entry, history] = await Promise.all([
       fetchBootstrapStatic(),
       fetchFixtures(),
       fetchLeagueStandings(config.fplLeagueId),
-      fetchManagerEntry(config.fplManagerId),
-      fetchManagerHistory(config.fplManagerId),
+      fetchManagerEntry(managerId),
+      fetchManagerHistory(managerId),
     ]);
 
     const currentGW =
@@ -51,7 +49,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       bootstrap.events.find((e) => e.is_next)?.id ?? currentGW + 1;
 
     const picks = await fetchGameweekPicks(
-      config.fplManagerId,
+      managerId,
       currentGW
     );
 
@@ -214,9 +212,7 @@ export default function AIAdvisorPage({ loaderData }: Route.ComponentProps) {
             <p className="text-gray-500 max-w-md mx-auto">
               {"error" in loaderData && loaderData.error === "ANTHROPIC_API_KEY not set"
                 ? "Add ANTHROPIC_API_KEY to your .env file to enable AI-powered advice."
-                : "error" in loaderData && loaderData.error === "FPL_MANAGER_ID not set"
-                  ? "Add FPL_MANAGER_ID to your .env file so the advisor knows which team to analyze."
-                  : `Error: ${"error" in loaderData ? loaderData.error : "Unknown"}`}
+                : `Error: ${"error" in loaderData ? loaderData.error : "Unknown"}`}
             </p>
           </div>
         </div>
