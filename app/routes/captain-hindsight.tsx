@@ -7,6 +7,7 @@ import {
 } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/captain-hindsight";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import type { FPLElement } from "~/lib/fpl-api/types";
 
 interface CaptainPick {
@@ -31,7 +32,8 @@ interface CaptainData {
   pointsLeftOnTable: number;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const [leagueData, bootstrapData] = await Promise.all([
     fetchLeagueStandings(config.fplLeagueId),

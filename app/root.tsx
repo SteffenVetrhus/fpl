@@ -160,7 +160,7 @@ function HamburgerMenu() {
               </div>
 
               {/* User info */}
-              {user && (
+              {user ? (
                 <div className="p-4 border-b border-white/10">
                   <div className="flex items-center gap-3 px-3">
                     <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
@@ -178,6 +178,16 @@ function HamburgerMenu() {
                       <LogOut size={16} />
                     </NavLink>
                   </div>
+                </div>
+              ) : (
+                <div className="p-4 border-b border-white/10">
+                  <NavLink
+                    to="/login"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all bg-purple-600 hover:bg-purple-500 text-white"
+                  >
+                    <User size={16} />
+                    Sign in for more features
+                  </NavLink>
                 </div>
               )}
 
@@ -209,61 +219,65 @@ function HamburgerMenu() {
                 ))}
               </div>
 
-              {/* Decision Tools */}
-              <div className="p-4 border-t border-white/10">
-                <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
-                {toolNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    viewTransition
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`
-                    }
-                  >
-                    <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center"
-                      style={{ background: item.color }}
+              {/* Decision Tools - only shown when logged in */}
+              {user && (
+                <div className="p-4 border-t border-white/10">
+                  <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
+                  {toolNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      viewTransition
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`
+                      }
                     >
-                      <item.icon size={14} color="white" />
-                    </div>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
+                      <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ background: item.color }}
+                      >
+                        <item.icon size={14} color="white" />
+                      </div>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
 
-              {/* Banter zone */}
-              <div className="p-4 border-t border-white/10">
-                <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
-                {banterNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    viewTransition
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`
-                    }
-                  >
-                    <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center"
-                      style={{ background: item.color }}
+              {/* Banter zone - only shown when logged in */}
+              {user && (
+                <div className="p-4 border-t border-white/10">
+                  <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
+                  {banterNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      viewTransition
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`
+                      }
                     >
-                      <item.icon size={14} color="white" />
-                    </div>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
+                      <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ background: item.color }}
+                      >
+                        <item.icon size={14} color="white" />
+                      </div>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </>

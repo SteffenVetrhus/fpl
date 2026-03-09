@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
-import { requireAuth } from "~/lib/pocketbase/auth";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { GameweekNavigator } from "~/components/GameweekNavigator/GameweekNavigator";
 import { HistoricalLeagueTable } from "~/components/HistoricalLeagueTable/HistoricalLeagueTable";
 import {
@@ -12,7 +12,7 @@ import {
 import type { Route } from "./+types/standings";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const user = await requireAuth(request);
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
@@ -27,7 +27,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     })
   );
 
-  return { managers, currentPlayerName: user.playerName };
+  return { managers, currentPlayerName: user?.playerName };
 }
 
 export default function Standings({ loaderData }: Route.ComponentProps) {

@@ -2,6 +2,7 @@ import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/rich-list";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface RichListEntry {
   managerName: string;
@@ -19,7 +20,8 @@ interface RichListEntry {
   highestBank: { bank: number; gameweek: number };
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 

@@ -1,15 +1,15 @@
 import { useLoaderData } from "react-router";
 import { fetchLeagueStandings } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
-import { requireAuth } from "~/lib/pocketbase/auth";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { LeagueTable } from "~/components/LeagueTable/LeagueTable";
 import type { Route } from "./+types/_index";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const user = await requireAuth(request);
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const data = await fetchLeagueStandings(config.fplLeagueId);
-  return { ...data, currentManagerId: user.fplManagerId };
+  return { ...data, currentManagerId: user?.fplManagerId };
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {

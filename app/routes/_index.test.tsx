@@ -9,7 +9,7 @@ vi.mock("~/config/env", () => ({
   getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
 }));
 vi.mock("~/lib/pocketbase/auth", () => ({
-  requireAuth: vi.fn().mockResolvedValue({
+  getOptionalAuth: vi.fn().mockResolvedValue({
     id: "user1",
     email: "alice@fpl.local",
     fplManagerId: 123456,

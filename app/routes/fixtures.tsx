@@ -3,6 +3,7 @@ import { fetchBootstrapStatic, fetchFixtures } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { buildFixtureGrid, getDifficultyColor } from "~/utils/fixture-difficulty";
 import type { Route } from "./+types/fixtures";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import type { FPLFixture, FPLTeam } from "~/lib/fpl-api/types";
 import type { TeamFixtureRun } from "~/utils/fixture-difficulty";
 
@@ -86,7 +87,8 @@ function buildCellData(
   return cellMap;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   getEnvConfig();
   const [bootstrap, allFixtures] = await Promise.all([
     fetchBootstrapStatic(),

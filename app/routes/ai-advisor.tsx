@@ -1,4 +1,5 @@
 import type { Route } from "./+types/ai-advisor";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import {
   fetchBootstrapStatic,
   fetchFixtures,
@@ -22,7 +23,8 @@ const POSITION_MAP: Record<number, string> = {
   4: "FWD",
 };
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   if (!isAdvisorAvailable()) {
     return { available: false as const, error: "ANTHROPIC_API_KEY not set" };
   }

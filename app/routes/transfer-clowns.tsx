@@ -7,6 +7,7 @@ import {
 } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/transfer-clowns";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface ClownAward {
   managerName: string;
@@ -22,7 +23,8 @@ interface ClownAward {
   biggestHitGW: { gameweek: number; cost: number };
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const [leagueData, bootstrapData] = await Promise.all([
     fetchLeagueStandings(config.fplLeagueId),

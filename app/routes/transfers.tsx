@@ -1,12 +1,12 @@
 import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerTransfers } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
-import { requireAuth } from "~/lib/pocketbase/auth";
+import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { TransferTracker } from "~/components/TransferTracker/TransferTracker";
 import type { Route } from "./+types/transfers";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const user = await requireAuth(request);
+  const user = await getOptionalAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
@@ -35,7 +35,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     };
   });
 
-  return { transferSummary, currentPlayerName: user.playerName };
+  return { transferSummary, currentPlayerName: user?.playerName };
 }
 
 export default function Transfers({ loaderData }: Route.ComponentProps) {

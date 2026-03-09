@@ -2,6 +2,7 @@ import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/league-vs-world";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface WorldData {
   managerName: string;
@@ -25,7 +26,8 @@ function getPercentile(rank: number, totalPlayers: number): number {
   return ((totalPlayers - rank) / totalPlayers) * 100;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 

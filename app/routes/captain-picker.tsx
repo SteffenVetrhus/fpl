@@ -2,9 +2,11 @@ import { fetchBootstrapStatic, fetchFixtures } from "~/lib/fpl-api/client";
 import { rankCaptainCandidates } from "~/utils/captain-score";
 import { Crown } from "lucide-react";
 import type { Route } from "./+types/captain-picker";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import type { CaptainCandidate } from "~/utils/captain-score";
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const [bootstrap, fixtures] = await Promise.all([
     fetchBootstrapStatic(),
     fetchFixtures(),

@@ -2,6 +2,7 @@ import { useLoaderData } from "react-router";
 import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/mood-swings";
+import { requireAuth } from "~/lib/pocketbase/auth";
 
 interface MoodData {
   managerName: string;
@@ -24,7 +25,8 @@ function calcStdDev(values: number[]): number {
   return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length);
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const config = getEnvConfig();
   const leagueData = await fetchLeagueStandings(config.fplLeagueId);
 
