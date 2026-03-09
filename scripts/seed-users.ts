@@ -97,6 +97,7 @@ async function main() {
         player_name: member.player_name,
         team_name: member.entry_name,
         emailVisibility: true,
+        verified: true,
       });
 
       console.log(`  CREATE: ${member.player_name} -> ${email}`);
