@@ -41,6 +41,7 @@ import {
   DollarSign,
   Brain,
   ClipboardList,
+  Dice6,
   Newspaper,
 } from "lucide-react";
 import type { Route } from "./+types/root";
@@ -98,6 +99,10 @@ const toolNavItems = [
   { to: "/price-tracker", label: "Price Tracker", icon: DollarSign, end: false, color: "#059669" },
   { to: "/ai-advisor", label: "AI Advisor", icon: Brain, end: false, color: "#4338CA" },
   { to: "/news", label: "FPL News", icon: Newspaper, end: false, color: "#0891B2" },
+];
+
+const miniGameNavItems = [
+  { to: "/mini-games", label: "Mini Games", icon: Dice6, end: false, color: "#EC4899" },
 ];
 
 const banterNavItems = [
@@ -226,6 +231,36 @@ function HamburgerMenu() {
                 <div className="p-4 border-t border-white/10">
                   <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
                   {toolNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      viewTransition
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`
+                      }
+                    >
+                      <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ background: item.color }}
+                      >
+                        <item.icon size={14} color="white" />
+                      </div>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+
+              {/* Mini Games - only shown when logged in */}
+              {user && (
+                <div className="p-4 border-t border-white/10">
+                  <p className="kit-stat-label text-white/40 mb-2 px-3">Mini Games</p>
+                  {miniGameNavItems.map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}

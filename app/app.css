@@ -76,6 +76,11 @@
   --color-page-news: #0891B2;
   --color-page-news-light: #06B6D4;
   --color-page-news-dark: #0E7490;
+
+  /* Mini Games */
+  --color-page-minigames: #EC4899;
+  --color-page-minigames-light: #F472B6;
+  --color-page-minigames-dark: #BE185D;
 }
 
 /* Base styles */
