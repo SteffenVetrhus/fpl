@@ -153,9 +153,10 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     };
   } catch (err) {
     console.error("[mini-games] Loader error:", err);
+    const message = err instanceof Error ? err.message : String(err);
     return {
       ...emptyResult,
-      error: "Failed to load mini games. Make sure PocketBase is running and collections are configured.",
+      error: `Failed to load mini games: ${message}`,
     };
   }
 }
