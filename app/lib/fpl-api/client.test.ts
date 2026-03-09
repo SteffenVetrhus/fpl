@@ -4,6 +4,7 @@ import {
   fetchLeagueStandings,
   fetchManagerHistory,
   fetchManagerTransfers,
+  clearCache,
 } from "./client";
 import type {
   FPLBootstrapStatic,
@@ -15,9 +16,24 @@ import type {
 // Mock global fetch
 global.fetch = vi.fn();
 
+// Mock env config - cache disabled by default for test isolation
+const mockGetEnvConfig = vi.fn(() => ({
+  fplLeagueId: "1313411",
+  apiBaseUrl: "https://fantasy.premierleague.com/api",
+  enableCache: false,
+  cacheDuration: 300,
+  pocketbaseUrl: "http://localhost:8090",
+  pocketbasePublicUrl: "http://localhost:8090",
+}));
+
+vi.mock("~/config/env", () => ({
+  getEnvConfig: () => mockGetEnvConfig(),
+}));
+
 describe("FPL API Client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearCache();
   });
 
   afterEach(() => {
@@ -92,7 +108,7 @@ describe("FPL API Client", () => {
       });
 
       await expect(fetchBootstrapStatic()).rejects.toThrow(
-        "Failed to fetch bootstrap-static: 500 Internal Server Error"
+        "Failed to fetch https://fantasy.premierleague.com/api/bootstrap-static/: 500 Internal Server Error"
       );
     });
 
@@ -177,7 +193,7 @@ describe("FPL API Client", () => {
       });
 
       await expect(fetchLeagueStandings("9999999")).rejects.toThrow(
-        "Failed to fetch league standings: 404 Not Found"
+        "Failed to fetch https://fantasy.premierleague.com/api/leagues-classic/9999999/standings/: 404 Not Found"
       );
     });
 
@@ -273,7 +289,7 @@ describe("FPL API Client", () => {
       });
 
       await expect(fetchManagerHistory("9999999")).rejects.toThrow(
-        "Failed to fetch manager history: 404 Not Found"
+        "Failed to fetch https://fantasy.premierleague.com/api/entry/9999999/history/: 404 Not Found"
       );
     });
   });
@@ -325,7 +341,7 @@ describe("FPL API Client", () => {
       });
 
       await expect(fetchManagerTransfers("9999999")).rejects.toThrow(
-        "Failed to fetch manager transfers: 404 Not Found"
+        "Failed to fetch https://fantasy.premierleague.com/api/entry/9999999/transfers/: 404 Not Found"
       );
     });
 
@@ -341,6 +357,181 @@ describe("FPL API Client", () => {
 
       expect(result).toEqual([]);
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("API Cache", () => {
+    it("should return cached data on second call", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: true,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result1 = await fetchManagerHistory("789012");
+      const result2 = await fetchManagerHistory("789012");
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(result1).toEqual(mockData);
+      expect(result2).toEqual(mockData);
+    });
+
+    it("should bypass cache when disabled", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: false,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await fetchManagerHistory("789012");
+      await fetchManagerHistory("789012");
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should refetch after TTL expires", async () => {
+      vi.useFakeTimers();
+
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: true,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await fetchManagerHistory("789012");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Advance past TTL (300s)
+      vi.advanceTimersByTime(301_000);
+
+      await fetchManagerHistory("789012");
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it("should use longer TTL for bootstrap-static", async () => {
+      vi.useFakeTimers();
+
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: true,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = {
+        events: [],
+        teams: [],
+        elements: [],
+        element_types: [],
+        total_players: 0,
+      };
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await fetchBootstrapStatic();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Advance past default TTL (300s) but not bootstrap TTL (3600s)
+      vi.advanceTimersByTime(301_000);
+
+      await fetchBootstrapStatic();
+      // Should still be cached (3600s TTL)
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Advance past bootstrap TTL
+      vi.advanceTimersByTime(3300_000);
+
+      await fetchBootstrapStatic();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it("should clear all cached entries with clearCache", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: true,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await fetchManagerHistory("789012");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      clearCache();
+
+      await fetchManagerHistory("789012");
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not cache failed responses", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: true,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      });
+
+      await expect(fetchManagerHistory("789012")).rejects.toThrow();
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      const result = await fetchManagerHistory("789012");
+      expect(result).toEqual(mockData);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
     });
   });
 });

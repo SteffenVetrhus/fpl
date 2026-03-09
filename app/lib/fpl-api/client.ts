@@ -14,8 +14,74 @@ import type {
   FPLElementSummary,
   FPLLiveGameweek,
 } from "./types";
+import { getEnvConfig } from "~/config/env";
 
 const API_BASE_URL = "https://fantasy.premierleague.com/api";
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+/** Per-endpoint TTL overrides in seconds */
+const ENDPOINT_TTL: Record<string, number> = {
+  "/bootstrap-static/": 3600,
+};
+
+/**
+ * Get TTL for a URL, checking endpoint overrides first, then falling back to config default
+ */
+function getTtlForUrl(url: string, defaultTtl: number): number {
+  for (const [pattern, ttl] of Object.entries(ENDPOINT_TTL)) {
+    if (url.includes(pattern)) {
+      return ttl;
+    }
+  }
+  return defaultTtl;
+}
+
+/**
+ * Fetch with in-memory caching. Returns cached response if available and not expired.
+ * @param url - The URL to fetch
+ * @returns Promise resolving to parsed JSON response
+ * @throws Error if fetch fails
+ */
+async function cachedFetch<T>(url: string): Promise<T> {
+  const config = getEnvConfig();
+
+  if (config.enableCache) {
+    const entry = cache.get(url) as CacheEntry<T> | undefined;
+    if (entry && entry.expiresAt > Date.now()) {
+      return entry.data;
+    }
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch ${url}: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const data: T = await response.json();
+
+  if (config.enableCache) {
+    const ttlSeconds = getTtlForUrl(url, config.cacheDuration);
+    cache.set(url, {
+      data,
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    });
+  }
+
+  return data;
+}
+
+/** Clear the API response cache */
+export function clearCache(): void {
+  cache.clear();
+}
 
 /**
  * Fetch bootstrap-static data
@@ -25,24 +91,7 @@ const API_BASE_URL = "https://fantasy.premierleague.com/api";
  * @throws Error if fetch fails
  */
 export async function fetchBootstrapStatic(): Promise<FPLBootstrapStatic> {
-  const url = `${API_BASE_URL}/bootstrap-static/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch bootstrap-static: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching bootstrap-static");
-  }
+  return cachedFetch<FPLBootstrapStatic>(`${API_BASE_URL}/bootstrap-static/`);
 }
 
 /**
@@ -68,22 +117,7 @@ export async function fetchLeagueStandings(
     queryString ? `?${queryString}` : ""
   }`;
 
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch league standings: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching league standings");
-  }
+  return cachedFetch<FPLLeagueStandings>(url);
 }
 
 /**
@@ -97,24 +131,7 @@ export async function fetchLeagueStandings(
 export async function fetchManagerEntry(
   managerId: string
 ): Promise<FPLEntry> {
-  const url = `${API_BASE_URL}/entry/${managerId}/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch manager entry: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching manager entry");
-  }
+  return cachedFetch<FPLEntry>(`${API_BASE_URL}/entry/${managerId}/`);
 }
 
 /**
@@ -128,24 +145,9 @@ export async function fetchManagerEntry(
 export async function fetchManagerHistory(
   managerId: string
 ): Promise<FPLManagerHistory> {
-  const url = `${API_BASE_URL}/entry/${managerId}/history/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch manager history: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching manager history");
-  }
+  return cachedFetch<FPLManagerHistory>(
+    `${API_BASE_URL}/entry/${managerId}/history/`
+  );
 }
 
 /**
@@ -159,24 +161,9 @@ export async function fetchManagerHistory(
 export async function fetchManagerTransfers(
   managerId: string
 ): Promise<FPLManagerTransfers> {
-  const url = `${API_BASE_URL}/entry/${managerId}/transfers/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch manager transfers: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching manager transfers");
-  }
+  return cachedFetch<FPLManagerTransfers>(
+    `${API_BASE_URL}/entry/${managerId}/transfers/`
+  );
 }
 
 /**
@@ -190,24 +177,7 @@ export async function fetchFixtures(
   gameweek?: number
 ): Promise<FPLFixture[]> {
   const params = gameweek ? `?event=${gameweek}` : "";
-  const url = `${API_BASE_URL}/fixtures/${params}`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch fixtures: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching fixtures");
-  }
+  return cachedFetch<FPLFixture[]>(`${API_BASE_URL}/fixtures/${params}`);
 }
 
 /**
@@ -220,24 +190,9 @@ export async function fetchFixtures(
 export async function fetchElementSummary(
   playerId: number
 ): Promise<FPLElementSummary> {
-  const url = `${API_BASE_URL}/element-summary/${playerId}/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch element summary: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching element summary");
-  }
+  return cachedFetch<FPLElementSummary>(
+    `${API_BASE_URL}/element-summary/${playerId}/`
+  );
 }
 
 /**
@@ -250,24 +205,9 @@ export async function fetchElementSummary(
 export async function fetchLiveGameweek(
   gameweek: number
 ): Promise<FPLLiveGameweek> {
-  const url = `${API_BASE_URL}/event/${gameweek}/live/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch live gameweek: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching live gameweek");
-  }
+  return cachedFetch<FPLLiveGameweek>(
+    `${API_BASE_URL}/event/${gameweek}/live/`
+  );
 }
 
 /**
@@ -283,22 +223,7 @@ export async function fetchGameweekPicks(
   managerId: string,
   gameweek: number
 ): Promise<FPLGameweekPicks> {
-  const url = `${API_BASE_URL}/entry/${managerId}/event/${gameweek}/picks/`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch gameweek picks: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("Unknown error fetching gameweek picks");
-  }
+  return cachedFetch<FPLGameweekPicks>(
+    `${API_BASE_URL}/entry/${managerId}/event/${gameweek}/picks/`
+  );
 }
