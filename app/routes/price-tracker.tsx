@@ -1,8 +1,7 @@
 import type { Route } from "./+types/price-tracker";
 import { fetchBootstrapStatic } from "~/lib/fpl-api/client";
-import { isDatabaseAvailable } from "~/lib/db/client";
-import { getPriceChanges, predictPriceChanges } from "~/lib/db/snapshots";
-import { TrendingUp, TrendingDown, Database, AlertCircle } from "lucide-react";
+import type { FPLElement } from "~/lib/fpl-api/types";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 const POSITION_MAP: Record<number, string> = {
   1: "GKP",
@@ -11,23 +10,38 @@ const POSITION_MAP: Record<number, string> = {
   4: "FWD",
 };
 
+/**
+ * Predict price changes based on transfer velocity
+ */
+function predictPriceChanges(players: FPLElement[]) {
+  const withVelocity = players
+    .filter((p) => p.status === "a" && p.minutes > 0)
+    .map((p) => ({
+      player: p,
+      netTransfers: p.transfers_in_event - p.transfers_out_event,
+      velocity:
+        (p.transfers_in_event - p.transfers_out_event) /
+        Math.max(p.transfers_in_event + p.transfers_out_event, 1),
+    }));
+
+  const likelyRisers = withVelocity
+    .filter((p) => p.netTransfers > 5000 && p.velocity > 0.3)
+    .sort((a, b) => b.netTransfers - a.netTransfers)
+    .slice(0, 10);
+
+  const likelyFallers = withVelocity
+    .filter((p) => p.netTransfers < -5000 && p.velocity < -0.3)
+    .sort((a, b) => a.netTransfers - b.netTransfers)
+    .slice(0, 10);
+
+  return { likelyRisers, likelyFallers };
+}
+
 export async function loader() {
   const bootstrap = await fetchBootstrapStatic();
   const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
 
-  const dbAvailable = await isDatabaseAvailable();
-
-  let priceChanges: Awaited<ReturnType<typeof getPriceChanges>> = [];
-  if (dbAvailable) {
-    try {
-      priceChanges = await getPriceChanges();
-    } catch {
-      // DB available but query failed — table might not exist yet
-    }
-  }
-
-  // Always show predictions from live API data (no DB needed)
-  const predictions = await predictPriceChanges(bootstrap.elements);
+  const predictions = predictPriceChanges(bootstrap.elements);
 
   const risers = predictions.likelyRisers.map((r) => ({
     id: r.player.id,
@@ -53,24 +67,11 @@ export async function loader() {
     form: parseFloat(f.player.form),
   }));
 
-  const confirmedChanges = priceChanges.map((pc) => ({
-    ...pc,
-    teamShort: teamMap.get(pc.teamId)?.short_name ?? "???",
-    position: POSITION_MAP[pc.elementType] ?? "???",
-    costDisplay: pc.currentCost / 10,
-    changeDisplay: pc.costChange / 10,
-  }));
-
-  return {
-    risers,
-    fallers,
-    confirmedChanges,
-    dbAvailable,
-  };
+  return { risers, fallers };
 }
 
 export default function PriceTrackerPage({ loaderData }: Route.ComponentProps) {
-  const { risers, fallers, confirmedChanges, dbAvailable } = loaderData;
+  const { risers, fallers } = loaderData;
 
   return (
     <main className="min-h-screen" style={{ background: "#059669" }}>
@@ -104,68 +105,6 @@ export default function PriceTrackerPage({ loaderData }: Route.ComponentProps) {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 -mt-12 pb-16 space-y-6">
-        {/* DB Status */}
-        {!dbAvailable && (
-          <div
-            className="kit-card p-4 kit-animate-slide-up flex items-center gap-3"
-            style={{ "--delay": "0ms" } as React.CSSProperties}
-          >
-            <Database size={20} className="text-amber-500 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Database not connected
-              </p>
-              <p className="text-xs text-gray-500">
-                Price predictions below use live transfer data. Connect
-                PostgreSQL via docker-compose for confirmed price change
-                history.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Confirmed price changes (from DB) */}
-        {confirmedChanges.length > 0 && (
-          <div
-            className="kit-card p-6 kit-animate-slide-up"
-            style={{ "--delay": "0ms" } as React.CSSProperties}
-          >
-            <h2 className="kit-headline text-lg text-gray-900 mb-4">
-              Confirmed Price Changes
-            </h2>
-            <div className="space-y-2">
-              {confirmedChanges.map((pc) => (
-                <div
-                  key={pc.playerId}
-                  className={`flex items-center gap-3 p-3 rounded-lg ${
-                    pc.costChange > 0 ? "bg-green-50" : "bg-red-50"
-                  }`}
-                >
-                  <span
-                    className={`kit-headline text-xl ${
-                      pc.costChange > 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {pc.costChange > 0 ? "+" : ""}
-                    £{pc.changeDisplay.toFixed(1)}m
-                  </span>
-                  <div className="flex-1">
-                    <span className="font-medium text-gray-900">
-                      {pc.webName}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      {pc.teamShort} · {pc.position}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    £{pc.costDisplay.toFixed(1)}m
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Predicted risers */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div

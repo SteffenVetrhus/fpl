@@ -4,7 +4,23 @@
  */
 
 import type { FPLElement, FPLPick } from "~/lib/fpl-api/types";
-import type { PlannedTransfer, GameweekPlan } from "~/lib/db/transfer-plans";
+
+export interface PlannedTransfer {
+  elementIn: number;
+  elementOut: number;
+}
+
+export interface GameweekPlan {
+  transfers: PlannedTransfer[];
+  captain: number | null;
+  viceCaptain: number | null;
+  chip: string | null;
+  benchOrder: number[];
+}
+
+export interface TransferPlanData {
+  gameweeks: Record<string, GameweekPlan>;
+}
 
 export interface SquadPlayer {
   element: number;

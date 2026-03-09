@@ -9,57 +9,9 @@ services:
       - ENABLE_API_CACHE=${ENABLE_API_CACHE:-true}
       - API_CACHE_DURATION=${API_CACHE_DURATION:-300}
       - FPL_MANAGER_ID=${FPL_MANAGER_ID:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://fpl:${DB_PASSWORD:-fplsecret}@postgres:5432/fpl
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  postgres:
-    image: postgres:16-alpine
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./app/lib/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
-    environment:
-      POSTGRES_DB: fpl
-      POSTGRES_USER: fpl
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-fplsecret}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fpl -d fpl"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redisdata:/data
-
-  cron:
-    build:
-      context: .
-      dockerfile: Dockerfile.cron
-    environment:
-      - FPL_LEAGUE_ID=${FPL_LEAGUE_ID}
-      - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
-      - FPL_MANAGER_ID=${FPL_MANAGER_ID:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - DATABASE_URL=postgresql://fpl:${DB_PASSWORD:-fplsecret}@postgres:5432/fpl
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  pgdata:
-  redisdata:
