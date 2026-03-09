@@ -230,9 +230,9 @@ function DifferentialCard({
   const scoreWidth = Math.min(100, (player.differentialScore / 8) * 100);
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
       {/* Score */}
-      <div className="w-12 text-center shrink-0">
+      <div className="w-12 text-center shrink-0 pt-0.5">
         <div className="kit-headline text-2xl text-purple-700">
           {player.differentialScore.toFixed(1)}
         </div>
@@ -240,27 +240,34 @@ function DifferentialCard({
 
       {/* Player info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-900 truncate">
+        {/* Name and team/position */}
+        <div className="flex items-baseline gap-2">
+          <span className="font-semibold text-gray-900 text-base">
             {player.webName}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 shrink-0">
             {player.teamShort} · {player.position}
           </span>
-          {player.isRising && (
-            <span className="flex items-center gap-0.5 text-xs text-emerald-600">
-              <TrendingUp size={12} /> Rising
-            </span>
-          )}
-          {isLeagueDiff && (
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-              League diff
-            </span>
-          )}
         </div>
 
+        {/* Badges */}
+        {(player.isRising || isLeagueDiff) && (
+          <div className="flex items-center gap-2 mt-1">
+            {player.isRising && (
+              <span className="flex items-center gap-0.5 text-xs text-emerald-600">
+                <TrendingUp size={12} /> Rising
+              </span>
+            )}
+            {isLeagueDiff && (
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                League diff
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Stats row */}
-        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-1.5 text-xs text-gray-500">
           <span>£{player.cost.toFixed(1)}m</span>
           <span>{player.ownership}% owned</span>
           <span>Form: {player.form}</span>
@@ -269,7 +276,7 @@ function DifferentialCard({
         </div>
 
         {/* Score bar */}
-        <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600"
             style={{ width: `${scoreWidth}%` }}
@@ -278,7 +285,7 @@ function DifferentialCard({
       </div>
 
       {/* Upcoming fixtures */}
-      <div className="flex gap-1 shrink-0 max-sm:hidden">
+      <div className="flex gap-1 shrink-0 max-sm:hidden mt-1">
         {player.upcomingFixtures.slice(0, 4).map((fix, i) => {
           const isBGW = fix === "BGW";
           const difficultyGuess = isBGW

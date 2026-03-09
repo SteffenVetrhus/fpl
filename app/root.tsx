@@ -40,6 +40,7 @@ import {
   Zap,
   DollarSign,
   Brain,
+  ClipboardList,
 } from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -86,6 +87,7 @@ const coreNavItems = [
 ];
 
 const toolNavItems = [
+  { to: "/transfer-planner", label: "Transfer Planner", icon: ClipboardList, end: false, color: "#4F46E5" },
   { to: "/fixtures", label: "Fixture Ticker", icon: Calendar, end: false, color: "#0D9488" },
   { to: "/captain-picker", label: "Captain Picker", icon: Target, end: false, color: "#D97706" },
   { to: "/transfer-hub", label: "Transfer Hub", icon: ArrowRightLeft, end: false, color: "#0891B2" },

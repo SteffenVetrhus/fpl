@@ -4,10 +4,12 @@ export default [
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
   index("routes/_index.tsx"),
+  route("health", "routes/health.tsx"),
   route("gameweeks", "routes/gameweeks.tsx"),
   route("standings", "routes/standings.tsx"),
   route("transfers", "routes/transfers.tsx"),
   // Decision Tools
+  route("transfer-planner", "routes/transfer-planner.tsx"),
   route("fixtures", "routes/fixtures.tsx"),
   route("captain-picker", "routes/captain-picker.tsx"),
   route("transfer-hub", "routes/transfer-hub.tsx"),

@@ -15,6 +15,11 @@ RUN curl -fsSL -o /tmp/pb.zip \
 
 COPY pb_migrations /pb/pb_migrations
 
+VOLUME /pb/pb_data
+
 EXPOSE 8090
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=10s \
+    CMD curl -f http://localhost:8090/api/health || exit 1
 
 CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--migrationsDir=/pb/pb_migrations"]
