@@ -1,18 +1,18 @@
-# Welcome to React Router!
+# FPL League Tracker
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A web application for tracking Fantasy Premier League league performance, gameweek winners, member transfers, historical standings, and advanced player statistics.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+Built with React Router v7, TypeScript, Tailwind CSS v4, and PocketBase.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- League dashboard with live standings and gameweek winners
+- Gameweek history with player filtering
+- Historical league standings across seasons
+- Transfer activity tracking
+- Stat Corner with 12 advanced metric leaderboards (xG, xA, CBIT, chances created, duels, dribbles, and more)
+- Player comparison tool with head-to-head metrics
+- Data powered by FPL API, Understat, and [FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights)
 
 ## Getting Started
 
@@ -78,10 +78,28 @@ Make sure to deploy the output of `npm run build`
 │   └── server/    # Server-side code
 ```
 
-## Styling
+## Data Scrapers
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+The app uses three Python scrapers that write to PocketBase:
 
----
+| Scraper | Source | Data |
+|---------|--------|------|
+| `scraper-fplcore/` | [FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights) CSVs | Match stats: chances created, duels, dribbles, recoveries, aerial duels, GK stats |
+| `scraper-understat/` | Understat API | xG, npxG, xA per gameweek |
+| `scraper-fpl/` | Official FPL API | Player roster, prices, ownership, FPL points |
 
-Built with ❤️ using React Router.
+Each scraper has its own `Dockerfile` and `requirements.txt`. Run with:
+
+```bash
+cd scraper-fplcore && pip install -r requirements.txt && python -m src.main
+```
+
+## Tech Stack
+
+- React Router v7 (SSR)
+- TypeScript 5.9 (strict)
+- Tailwind CSS v4
+- Vite 7
+- Vitest + Testing Library + Playwright
+- PocketBase (auth + data storage)
+- Node.js 20

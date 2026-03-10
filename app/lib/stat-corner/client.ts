@@ -179,11 +179,20 @@ export async function fetchTopPerformers(
         xaPer90: 0,
         cbitPer90: 0,
         gameweeks: 1,
+        totalChancesCreated: 0,
+        totalSuccessfulDribbles: 0,
+        totalTouchesOppositionBox: 0,
+        totalRecoveries: 0,
+        totalDuelsWon: 0,
+        totalAerialDuelsWon: 0,
+        totalBigChancesMissed: 0,
+        totalGoalsPrevented: 0,
+        totalDefensiveContributions: 0,
       });
     }
   }
 
-  // Merge season aggregates (FBRef data stored as gw=0)
+  // Merge season aggregates (gw=0) from FPL-Core-Insights / FBRef
   for (const [playerId, summary] of summaries) {
     const season = seasonMap.get(playerId);
     if (season) {
@@ -191,6 +200,15 @@ export async function fetchTopPerformers(
       summary.totalBallRecoveries = season.ball_recoveries || 0;
       summary.totalProgressiveCarries = season.progressive_carries || 0;
       summary.totalSca = season.sca || 0;
+      summary.totalChancesCreated = season.chances_created || 0;
+      summary.totalSuccessfulDribbles = season.successful_dribbles || 0;
+      summary.totalTouchesOppositionBox = season.touches_opposition_box || 0;
+      summary.totalRecoveries = season.recoveries || 0;
+      summary.totalDuelsWon = season.duels_won || 0;
+      summary.totalAerialDuelsWon = season.aerial_duels_won || 0;
+      summary.totalBigChancesMissed = season.big_chances_missed || 0;
+      summary.totalGoalsPrevented = season.goals_prevented || 0;
+      summary.totalDefensiveContributions = season.defensive_contributions || 0;
     }
 
     // Compute derived metrics
@@ -253,6 +271,24 @@ function getMetricValue(summary: PlayerStatSummary, metric: StatMetric): number 
       return summary.totalBallRecoveries;
     case "fpl_points":
       return summary.totalFplPoints;
+    case "chances_created":
+      return summary.totalChancesCreated;
+    case "successful_dribbles":
+      return summary.totalSuccessfulDribbles;
+    case "touches_opposition_box":
+      return summary.totalTouchesOppositionBox;
+    case "recoveries":
+      return summary.totalRecoveries;
+    case "duels_won":
+      return summary.totalDuelsWon;
+    case "aerial_duels_won":
+      return summary.totalAerialDuelsWon;
+    case "big_chances_missed":
+      return summary.totalBigChancesMissed;
+    case "goals_prevented":
+      return summary.totalGoalsPrevented;
+    case "defensive_contributions":
+      return summary.totalDefensiveContributions;
     default:
       return 0;
   }

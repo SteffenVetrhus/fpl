@@ -38,6 +38,24 @@ function getMetricDisplayValue(
       return player.totalBallRecoveries;
     case "fpl_points":
       return player.totalFplPoints;
+    case "chances_created":
+      return player.totalChancesCreated;
+    case "successful_dribbles":
+      return player.totalSuccessfulDribbles;
+    case "touches_opposition_box":
+      return player.totalTouchesOppositionBox;
+    case "recoveries":
+      return player.totalRecoveries;
+    case "duels_won":
+      return player.totalDuelsWon;
+    case "aerial_duels_won":
+      return player.totalAerialDuelsWon;
+    case "big_chances_missed":
+      return player.totalBigChancesMissed;
+    case "goals_prevented":
+      return player.totalGoalsPrevented;
+    case "defensive_contributions":
+      return player.totalDefensiveContributions;
     default:
       return 0;
   }

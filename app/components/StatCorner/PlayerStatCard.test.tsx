@@ -31,6 +31,15 @@ function makeSummary(overrides: Partial<PlayerStatSummary> = {}): PlayerStatSumm
     xaPer90: 0.41,
     cbitPer90: 0,
     gameweeks: 10,
+    totalChancesCreated: 0,
+    totalSuccessfulDribbles: 0,
+    totalTouchesOppositionBox: 0,
+    totalRecoveries: 0,
+    totalDuelsWon: 0,
+    totalAerialDuelsWon: 0,
+    totalBigChancesMissed: 0,
+    totalGoalsPrevented: 0,
+    totalDefensiveContributions: 0,
     ...overrides,
   };
 }
@@ -65,7 +74,7 @@ describe("PlayerStatCard", () => {
   });
 
   it("hides CBIT section when zero", () => {
-    render(<PlayerStatCard player={makeSummary({ totalCbit: 0, totalSca: 0 })} />);
+    render(<PlayerStatCard player={makeSummary({ totalCbit: 0, totalChancesCreated: 0 })} />);
     expect(screen.queryByText("CBIT")).not.toBeInTheDocument();
   });
 });
