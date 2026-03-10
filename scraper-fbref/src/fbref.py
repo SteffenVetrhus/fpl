@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(os.getenv("FBREF_DATA_DIR", "/app/data"))
 
 # Base names (without extension) for each stat page.
-POSSESSION_FILE = "possession"
+POSSESSION_FILE = "posession"
 GCA_FILE = "gca"
-DEFENSE_FILE = "defense"
+DEFENSE_FILE = "defensive"
 
 # Supported extensions in priority order.
 _EXTENSIONS = (".mht", ".mhtml", ".html")
