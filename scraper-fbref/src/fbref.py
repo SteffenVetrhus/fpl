@@ -23,14 +23,15 @@ EPL_SEASON_URL = f"{FBREF_BASE}/en/comps/9/2025-2026/stats/2025-2026-Premier-Lea
 _BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
     ),
     "Accept": (
         "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/avif,image/webp,*/*;q=0.8"
+        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
+        "application/signed-exchange;v=b3;q=0.7"
     ),
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
     "DNT": "1",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
@@ -38,7 +39,11 @@ _BROWSER_HEADERS = {
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
+    "Sec-CH-UA": '"Chromium";v="133", "Not(A:Brand";v="99", "Google Chrome";v="133"',
+    "Sec-CH-UA-Mobile": "?0",
+    "Sec-CH-UA-Platform": '"Linux"',
     "Cache-Control": "max-age=0",
+    "Referer": "https://www.google.com/",
 }
 
 MAX_RETRIES = 4
@@ -57,27 +62,27 @@ def _create_client() -> httpx.Client:
 
 def _fetch_page(client: httpx.Client, url: str) -> str:
     """Fetch an HTML page from FBRef with retry and exponential backoff."""
-    for attempt in range(MAX_RETRIES):
+    last_exc: httpx.HTTPStatusError | None = None
+    for attempt in range(MAX_RETRIES + 1):
         try:
             resp = client.get(url)
             resp.raise_for_status()
             return resp.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            if status == 429 or status == 403:
+            last_exc = exc
+            if (status == 429 or status == 403) and attempt < MAX_RETRIES:
                 low = INITIAL_BACKOFF * (2 ** attempt)
                 high = low + 3
                 logger.warning(
                     "FBRef returned %d for %s (attempt %d/%d), "
                     "retrying in %d-%ds...",
-                    status, url, attempt + 1, MAX_RETRIES, low, high,
+                    status, url, attempt + 1, MAX_RETRIES + 1, low, high,
                 )
                 human_delay_range(low, high)
             else:
                 raise
-    resp = client.get(url)
-    resp.raise_for_status()
-    return resp.text
+    raise last_exc  # type: ignore[misc]
 
 
 def _parse_stat_table(
