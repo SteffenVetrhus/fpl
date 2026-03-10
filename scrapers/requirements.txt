@@ -1,0 +1,5 @@
+pocketbase>=0.13.0
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
+cloudscraper>=1.2.71
+rapidfuzz>=3.6.0

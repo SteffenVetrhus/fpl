@@ -19,6 +19,7 @@ export default [
   route("rival-spy", "routes/rival-spy.tsx"),
   route("chip-planner", "routes/chip-planner.tsx"),
   route("price-tracker", "routes/price-tracker.tsx"),
+  route("stat-corner", "routes/stat-corner.tsx"),
   route("ai-advisor", "routes/ai-advisor.tsx"),
   route("news", "routes/news.tsx"),
 
