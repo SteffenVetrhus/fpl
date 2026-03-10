@@ -49,10 +49,6 @@ def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -
         existing = pb.collection("gameweek_stats").get_first_list_item(
             f'player = "{player_record_id}" && gw = {gw}'
         )
-        merged = {**existing.__dict__.get("collection_id", {}), **data}
-        merged.pop("id", None)
-        merged.pop("collection_id", None)
-        merged.pop("collection_name", None)
         record = pb.collection("gameweek_stats").update(existing.id, {
             "player": player_record_id,
             "gw": gw,
