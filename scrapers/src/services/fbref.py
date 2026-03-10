@@ -8,11 +8,11 @@ Cloudflare protection.
 from __future__ import annotations
 
 import logging
-import time
 
 import cloudscraper
 from bs4 import BeautifulSoup
 
+from src.delay import human_delay_range
 from src.pb_client import get_all_players, upsert_gameweek_stat
 from src.player_matcher import match_player, update_player_external_id
 
@@ -151,7 +151,7 @@ def run() -> int:
     player_stats: dict[str, dict] = {}
 
     # 1. Possession stats → progressive carries
-    time.sleep(3)
+    human_delay_range(3, 6)
     for row in fetch_possession_stats(scraper):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         player_stats.setdefault(key, {}).update({
@@ -162,7 +162,7 @@ def run() -> int:
         })
 
     # 2. GCA stats → shot-creating actions
-    time.sleep(5)
+    human_delay_range(5, 10)
     for row in fetch_gca_stats(scraper):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         player_stats.setdefault(key, {}).update({
@@ -173,7 +173,7 @@ def run() -> int:
         })
 
     # 3. Defense stats → CBIT, ball recoveries
-    time.sleep(5)
+    human_delay_range(5, 10)
     for row in fetch_defense_stats(scraper):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         tackles = _safe_int(row.get("tackles", "0"))

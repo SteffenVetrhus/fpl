@@ -14,6 +14,7 @@ import logging
 import sys
 import time
 
+from src.delay import human_delay_range
 from src.pb_client import log_sync
 
 logging.basicConfig(
@@ -53,9 +54,17 @@ def main() -> None:
     from src.services.fpl_sync import run as fpl_run
     run_service("fpl_sync", fpl_run)
 
+    # Pause between services to avoid rapid cross-site traffic
+    logger.info("Pausing before Understat...")
+    human_delay_range(10, 30)
+
     # Service 2: Understat — needs player records for matching
     from src.services.understat import run as understat_run
     run_service("understat", understat_run)
+
+    # Pause between services
+    logger.info("Pausing before FBRef...")
+    human_delay_range(15, 45)
 
     # Service 3: FBRef — needs player records for matching
     from src.services.fbref import run as fbref_run
