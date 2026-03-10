@@ -77,6 +77,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     ENV: {
       POCKETBASE_URL: config.pocketbasePublicUrl,
     },
+    plausibleDomain: config.plausibleDomain,
+    plausibleScriptUrl: config.plausibleScriptUrl,
   };
 }
 
@@ -340,10 +342,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     user: AuthUser | null;
     deadline: { deadlineTime: string; gameweekName: string } | null;
     ENV: { POCKETBASE_URL: string };
+    plausibleDomain?: string;
+    plausibleScriptUrl?: string;
   } | undefined;
   const user = data?.user ?? null;
   const deadline = data?.deadline ?? null;
   const env = data?.ENV;
+  const plausibleDomain = data?.plausibleDomain;
+  const plausibleScriptUrl = data?.plausibleScriptUrl;
 
   return (
     <html lang="en">
@@ -352,6 +358,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        {plausibleDomain && plausibleScriptUrl && (
+          <script
+            defer
+            data-domain={plausibleDomain}
+            src={plausibleScriptUrl}
+          />
+        )}
       </head>
       <body>
         <AuthCtx.Provider value={{ user }}>
