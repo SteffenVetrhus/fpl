@@ -1,17 +1,14 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libgtk-3-0 libasound2t64 libx11-xcb1 \
-        xvfb && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache gcc musl-dev libffi-dev
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m camoufox fetch
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 
+# Mount your saved HTML files to /app/data:
+#   docker run -v ./data:/app/data scraper-fbref
 CMD ["python", "-m", "src.main"]
