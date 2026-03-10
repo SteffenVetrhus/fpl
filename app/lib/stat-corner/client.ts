@@ -119,25 +119,12 @@ export async function fetchTopPerformers(
     .collection("players")
     .getFullList<PlayerRecord>({ sort: "name" });
 
-  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${players.length} players found`);
-
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
-  // Get all gameweek stats (gw > 0 — exclude season aggregates)
+  // Get all per-gameweek stats (gw > 0)
   const allStats = await pb
     .collection("gameweek_stats")
     .getFullList<GameweekStat>({ filter: "gw > 0" });
-
-  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${allStats.length} gameweek stats (gw > 0)`);
-
-  // Also get season aggregates (gw = 0) for FBRef data
-  const seasonAggregates = await pb
-    .collection("gameweek_stats")
-    .getFullList<GameweekStat>({ filter: "gw = 0" });
-
-  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${seasonAggregates.length} season aggregates (gw = 0)`);
-
-  const seasonMap = new Map(seasonAggregates.map((s) => [s.player, s]));
 
   // Aggregate per player
   const summaries = new Map<string, PlayerStatSummary>();
@@ -157,6 +144,19 @@ export async function fetchTopPerformers(
       existing.totalShots += stat.shots || 0;
       existing.totalKeyPasses += stat.key_passes || 0;
       existing.totalFplPoints += stat.fpl_points || 0;
+      existing.totalCbit += stat.cbit || 0;
+      existing.totalBallRecoveries += stat.ball_recoveries || 0;
+      existing.totalProgressiveCarries += stat.progressive_carries || 0;
+      existing.totalSca += stat.sca || 0;
+      existing.totalChancesCreated += stat.chances_created || 0;
+      existing.totalSuccessfulDribbles += stat.successful_dribbles || 0;
+      existing.totalTouchesOppositionBox += stat.touches_opposition_box || 0;
+      existing.totalRecoveries += stat.recoveries || 0;
+      existing.totalDuelsWon += stat.duels_won || 0;
+      existing.totalAerialDuelsWon += stat.aerial_duels_won || 0;
+      existing.totalBigChancesMissed += stat.big_chances_missed || 0;
+      existing.totalGoalsPrevented += stat.goals_prevented || 0;
+      existing.totalDefensiveContributions += stat.defensive_contributions || 0;
       existing.gameweeks += 1;
     } else {
       summaries.set(stat.player, {
@@ -169,57 +169,37 @@ export async function fetchTopPerformers(
         totalXa: stat.xa || 0,
         totalShots: stat.shots || 0,
         totalKeyPasses: stat.key_passes || 0,
-        totalCbit: 0,
-        totalBallRecoveries: 0,
-        totalProgressiveCarries: 0,
-        totalSca: 0,
+        totalCbit: stat.cbit || 0,
+        totalBallRecoveries: stat.ball_recoveries || 0,
+        totalProgressiveCarries: stat.progressive_carries || 0,
+        totalSca: stat.sca || 0,
         totalFplPoints: stat.fpl_points || 0,
         overperformance: 0,
         xgPer90: 0,
         xaPer90: 0,
         cbitPer90: 0,
         gameweeks: 1,
-        totalChancesCreated: 0,
-        totalSuccessfulDribbles: 0,
-        totalTouchesOppositionBox: 0,
-        totalRecoveries: 0,
-        totalDuelsWon: 0,
-        totalAerialDuelsWon: 0,
-        totalBigChancesMissed: 0,
-        totalGoalsPrevented: 0,
-        totalDefensiveContributions: 0,
+        totalChancesCreated: stat.chances_created || 0,
+        totalSuccessfulDribbles: stat.successful_dribbles || 0,
+        totalTouchesOppositionBox: stat.touches_opposition_box || 0,
+        totalRecoveries: stat.recoveries || 0,
+        totalDuelsWon: stat.duels_won || 0,
+        totalAerialDuelsWon: stat.aerial_duels_won || 0,
+        totalBigChancesMissed: stat.big_chances_missed || 0,
+        totalGoalsPrevented: stat.goals_prevented || 0,
+        totalDefensiveContributions: stat.defensive_contributions || 0,
       });
     }
   }
 
-  // Merge season aggregates (gw=0) from FPL-Core-Insights / FBRef
-  for (const [playerId, summary] of summaries) {
-    const season = seasonMap.get(playerId);
-    if (season) {
-      summary.totalCbit = season.cbit || 0;
-      summary.totalBallRecoveries = season.ball_recoveries || 0;
-      summary.totalProgressiveCarries = season.progressive_carries || 0;
-      summary.totalSca = season.sca || 0;
-      summary.totalChancesCreated = season.chances_created || 0;
-      summary.totalSuccessfulDribbles = season.successful_dribbles || 0;
-      summary.totalTouchesOppositionBox = season.touches_opposition_box || 0;
-      summary.totalRecoveries = season.recoveries || 0;
-      summary.totalDuelsWon = season.duels_won || 0;
-      summary.totalAerialDuelsWon = season.aerial_duels_won || 0;
-      summary.totalBigChancesMissed = season.big_chances_missed || 0;
-      summary.totalGoalsPrevented = season.goals_prevented || 0;
-      summary.totalDefensiveContributions = season.defensive_contributions || 0;
-    }
-
-    // Compute derived metrics
+  // Compute derived metrics
+  for (const [, summary] of summaries) {
     summary.overperformance = summary.totalGoals - summary.totalXg;
     const nineties = summary.totalMinutes / 90;
     summary.xgPer90 = nineties > 0 ? summary.totalXg / nineties : 0;
     summary.xaPer90 = nineties > 0 ? summary.totalXa / nineties : 0;
     summary.cbitPer90 = nineties > 0 ? summary.totalCbit / nineties : 0;
   }
-
-  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${summaries.size} player summaries after aggregation`);
 
   // Sort by the requested metric
   const sorted = Array.from(summaries.values()).sort((a, b) => {

@@ -21,7 +21,6 @@ def get_client() -> PocketBase:
     if _client is None:
         _client = PocketBase(PB_URL)
         _client.admins.auth_with_password(PB_USER, PB_PASS)
-        logger.info("Authenticated with PocketBase at %s", PB_URL)
     return _client
 
 
