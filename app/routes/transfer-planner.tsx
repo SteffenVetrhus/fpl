@@ -798,8 +798,9 @@ export default function TransferPlannerPage({
   );
 
   // Compute squad state by applying plans up to active GW
-  const computedSquad = useMemo(() => {
-    if (!initialSquad) return null;
+  // Also track free transfers BEFORE the active GW's plan for hit cost calculation
+  const { computedSquad, activeGWFreeTransfers } = useMemo(() => {
+    if (!initialSquad) return { computedSquad: null, activeGWFreeTransfers: 0 };
 
     let squad = initialSquad;
     // Build a fake elements array from allPlayers for applyPlanToSquad
@@ -855,8 +856,17 @@ export default function TransferPlannerPage({
       expected_goals_conceded: "0.0",
     }));
 
+    // Track FT before the active GW's plan is applied
+    let freeTransfersBeforeActiveGW = squad.freeTransfers;
+
     for (const gw of upcomingGWs) {
       if (gw > activeGW) break;
+
+      // Capture FT before applying the active GW's plan
+      if (gw === activeGW) {
+        freeTransfersBeforeActiveGW = squad.freeTransfers;
+      }
+
       const gwPlan = plan.gameweeks[gw.toString()];
       if (gwPlan && gwPlan.transfers.length > 0) {
         squad = applyPlanToSquad(squad, gwPlan, fakeElements);
@@ -876,7 +886,7 @@ export default function TransferPlannerPage({
       }
     }
 
-    return squad;
+    return { computedSquad: squad, activeGWFreeTransfers: freeTransfersBeforeActiveGW };
   }, [initialSquad, plan, activeGW, upcomingGWs, allPlayers]);
 
   const currentGWPlan: GameweekPlan = plan.gameweeks[activeGW.toString()] ?? {
@@ -890,7 +900,7 @@ export default function TransferPlannerPage({
   const hitCost = computedSquad
     ? calculateHitCost(
         currentGWPlan.transfers.length,
-        computedSquad.freeTransfers,
+        activeGWFreeTransfers,
         currentGWPlan.chip
       )
     : 0;
@@ -1045,15 +1055,32 @@ export default function TransferPlannerPage({
     (newPlayerId: number) => {
       if (!swappingPlayerId) return;
 
-      const newTransfers = [
-        ...currentGWPlan.transfers.filter(
-          (t) => t.elementOut !== swappingPlayerId
-        ),
-        { elementIn: newPlayerId, elementOut: swappingPlayerId },
-      ];
+      // Check if swapping a player that was already transferred in this GW
+      const existingTransfer = currentGWPlan.transfers.find(
+        (t) => t.elementIn === swappingPlayerId
+      );
+
+      let newTransfers;
+      if (existingTransfer) {
+        // Replace the existing transfer, keeping the original elementOut
+        newTransfers = [
+          ...currentGWPlan.transfers.filter(
+            (t) => t.elementIn !== swappingPlayerId
+          ),
+          { elementIn: newPlayerId, elementOut: existingTransfer.elementOut },
+        ];
+      } else {
+        newTransfers = [
+          ...currentGWPlan.transfers.filter(
+            (t) => t.elementOut !== swappingPlayerId
+          ),
+          { elementIn: newPlayerId, elementOut: swappingPlayerId },
+        ];
+      }
 
       updateGWPlan({ transfers: newTransfers });
       setSwappingPlayerId(null);
+      setSearchOpen(false);
     },
     [swappingPlayerId, currentGWPlan, updateGWPlan]
   );
@@ -1253,7 +1280,7 @@ export default function TransferPlannerPage({
                     Free Transfers
                   </div>
                   <div className="kit-headline text-2xl text-gray-900 mt-1">
-                    {computedSquad.freeTransfers}
+                    {activeGWFreeTransfers}
                   </div>
                 </div>
                 <div
