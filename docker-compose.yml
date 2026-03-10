@@ -34,5 +34,17 @@ services:
       timeout: 5s
       retries: 5
 
+  scrapers:
+    build:
+      context: ./scrapers
+    environment:
+      - PB_URL=http://pocketbase:8090
+      - PB_USER=${PB_ADMIN_EMAIL}
+      - PB_PASS=${PB_ADMIN_PASSWORD}
+      - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+
 volumes:
   pb_data:
