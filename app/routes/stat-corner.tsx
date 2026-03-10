@@ -1,6 +1,6 @@
 import { BarChart2, RefreshCw, TrendingUp, Shield, Sparkles, Target, Crosshair, Swords, Zap, CircleOff, Hand } from "lucide-react";
 import { requireAuth } from "~/lib/pocketbase/auth";
-import { fetchTopPerformers, fetchSyncStatus } from "~/lib/stat-corner/client";
+import { fetchAllLeaderboards, fetchSyncStatus } from "~/lib/stat-corner/client";
 import type { PlayerStatSummary, SyncLogEntry } from "~/lib/stat-corner/types";
 import { MetricLeaderboard } from "~/components/StatCorner/MetricLeaderboard";
 import { formatStat } from "~/utils/stat-corner";
@@ -9,39 +9,32 @@ import type { Route } from "./+types/stat-corner";
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
 
-  const catchFetch = (label: string) => (e: unknown) => {
-    console.error(`[stat-corner] ${label} failed:`, e);
-    return [] as PlayerStatSummary[];
-  };
-
-  const [
-    clinical, topXg, topXa, topCbit, topSca,
-    boxThreat, duelMasters, dribbleKings, ballWinners,
-    aerialDominance, gkWall, bigChanceWasters,
-    syncStatus,
-  ] = await Promise.all([
-    fetchTopPerformers(request, "overperformance", 10).catch(catchFetch("overperformance")),
-    fetchTopPerformers(request, "xg", 10).catch(catchFetch("xg")),
-    fetchTopPerformers(request, "xa", 10).catch(catchFetch("xa")),
-    fetchTopPerformers(request, "cbit", 10).catch(catchFetch("cbit")),
-    fetchTopPerformers(request, "chances_created", 10).catch(catchFetch("chances_created")),
-    fetchTopPerformers(request, "touches_opposition_box", 10).catch(catchFetch("touches_opposition_box")),
-    fetchTopPerformers(request, "duels_won", 10).catch(catchFetch("duels_won")),
-    fetchTopPerformers(request, "successful_dribbles", 10).catch(catchFetch("successful_dribbles")),
-    fetchTopPerformers(request, "recoveries", 10).catch(catchFetch("recoveries")),
-    fetchTopPerformers(request, "aerial_duels_won", 10).catch(catchFetch("aerial_duels_won")),
-    fetchTopPerformers(request, "goals_prevented", 10).catch(catchFetch("goals_prevented")),
-    fetchTopPerformers(request, "big_chances_missed", 10).catch(catchFetch("big_chances_missed")),
+  const [leaderboards, syncStatus] = await Promise.all([
+    fetchAllLeaderboards(request, 10).catch((e) => {
+      console.error("[stat-corner] fetchAllLeaderboards failed:", e);
+      return null;
+    }),
     fetchSyncStatus(request).catch((e) => {
       console.error("[stat-corner] fetchSyncStatus failed:", e);
       return [] as SyncLogEntry[];
     }),
   ]);
 
+  const empty: PlayerStatSummary[] = [];
+
   return {
-    clinical, topXg, topXa, topCbit, topSca,
-    boxThreat, duelMasters, dribbleKings, ballWinners,
-    aerialDominance, gkWall, bigChanceWasters,
+    clinical: leaderboards?.overperformance ?? empty,
+    topXg: leaderboards?.xg ?? empty,
+    topXa: leaderboards?.xa ?? empty,
+    topCbit: leaderboards?.cbit ?? empty,
+    topSca: leaderboards?.chances_created ?? empty,
+    boxThreat: leaderboards?.touches_opposition_box ?? empty,
+    duelMasters: leaderboards?.duels_won ?? empty,
+    dribbleKings: leaderboards?.successful_dribbles ?? empty,
+    ballWinners: leaderboards?.recoveries ?? empty,
+    aerialDominance: leaderboards?.aerial_duels_won ?? empty,
+    gkWall: leaderboards?.goals_prevented ?? empty,
+    bigChanceWasters: leaderboards?.big_chances_missed ?? empty,
     syncStatus,
   };
 }
