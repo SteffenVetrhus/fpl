@@ -11,12 +11,30 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const [clinical, topXg, topXa, topCbit, topSca, syncStatus] =
     await Promise.all([
-      fetchTopPerformers("overperformance", 10).catch(() => []),
-      fetchTopPerformers("xg", 10).catch(() => []),
-      fetchTopPerformers("xa", 10).catch(() => []),
-      fetchTopPerformers("cbit", 10).catch(() => []),
-      fetchTopPerformers("sca", 10).catch(() => []),
-      fetchSyncStatus().catch(() => []),
+      fetchTopPerformers("overperformance", 10).catch((e) => {
+        console.error("[stat-corner] fetchTopPerformers(overperformance) failed:", e);
+        return [] as PlayerStatSummary[];
+      }),
+      fetchTopPerformers("xg", 10).catch((e) => {
+        console.error("[stat-corner] fetchTopPerformers(xg) failed:", e);
+        return [] as PlayerStatSummary[];
+      }),
+      fetchTopPerformers("xa", 10).catch((e) => {
+        console.error("[stat-corner] fetchTopPerformers(xa) failed:", e);
+        return [] as PlayerStatSummary[];
+      }),
+      fetchTopPerformers("cbit", 10).catch((e) => {
+        console.error("[stat-corner] fetchTopPerformers(cbit) failed:", e);
+        return [] as PlayerStatSummary[];
+      }),
+      fetchTopPerformers("sca", 10).catch((e) => {
+        console.error("[stat-corner] fetchTopPerformers(sca) failed:", e);
+        return [] as PlayerStatSummary[];
+      }),
+      fetchSyncStatus().catch((e) => {
+        console.error("[stat-corner] fetchSyncStatus failed:", e);
+        return [] as SyncLogEntry[];
+      }),
     ]);
 
   return { clinical, topXg, topXa, topCbit, topSca, syncStatus };
