@@ -1,4 +1,4 @@
-import { BarChart2, RefreshCw, TrendingUp, Shield, Sparkles, Target } from "lucide-react";
+import { BarChart2, RefreshCw, TrendingUp, Shield, Sparkles, Target, Crosshair, Swords, Zap, CircleOff, Hand } from "lucide-react";
 import { requireAuth } from "~/lib/pocketbase/auth";
 import { fetchTopPerformers, fetchSyncStatus } from "~/lib/stat-corner/client";
 import type { PlayerStatSummary, SyncLogEntry } from "~/lib/stat-corner/types";
@@ -9,17 +9,33 @@ import type { Route } from "./+types/stat-corner";
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
 
-  const [clinical, topXg, topXa, topCbit, topSca, syncStatus] =
-    await Promise.all([
-      fetchTopPerformers("overperformance", 10).catch(() => []),
-      fetchTopPerformers("xg", 10).catch(() => []),
-      fetchTopPerformers("xa", 10).catch(() => []),
-      fetchTopPerformers("cbit", 10).catch(() => []),
-      fetchTopPerformers("sca", 10).catch(() => []),
-      fetchSyncStatus().catch(() => []),
-    ]);
+  const [
+    clinical, topXg, topXa, topCbit, topSca,
+    boxThreat, duelMasters, dribbleKings, ballWinners,
+    aerialDominance, gkWall, bigChanceWasters,
+    syncStatus,
+  ] = await Promise.all([
+    fetchTopPerformers("overperformance", 10).catch(() => []),
+    fetchTopPerformers("xg", 10).catch(() => []),
+    fetchTopPerformers("xa", 10).catch(() => []),
+    fetchTopPerformers("cbit", 10).catch(() => []),
+    fetchTopPerformers("chances_created", 10).catch(() => []),
+    fetchTopPerformers("touches_opposition_box", 10).catch(() => []),
+    fetchTopPerformers("duels_won", 10).catch(() => []),
+    fetchTopPerformers("successful_dribbles", 10).catch(() => []),
+    fetchTopPerformers("recoveries", 10).catch(() => []),
+    fetchTopPerformers("aerial_duels_won", 10).catch(() => []),
+    fetchTopPerformers("goals_prevented", 10).catch(() => []),
+    fetchTopPerformers("big_chances_missed", 10).catch(() => []),
+    fetchSyncStatus().catch(() => []),
+  ]);
 
-  return { clinical, topXg, topXa, topCbit, topSca, syncStatus };
+  return {
+    clinical, topXg, topXa, topCbit, topSca,
+    boxThreat, duelMasters, dribbleKings, ballWinners,
+    aerialDominance, gkWall, bigChanceWasters,
+    syncStatus,
+  };
 }
 
 function SyncStatusBadge({ entries }: { entries: SyncLogEntry[] }) {
@@ -55,12 +71,21 @@ function getTimeAgo(dateStr: string): string {
 }
 
 export default function StatCornerPage({ loaderData }: Route.ComponentProps) {
-  const { clinical, topXg, topXa, topCbit, topSca, syncStatus } = loaderData;
+  const {
+    clinical, topXg, topXa, topCbit, topSca,
+    boxThreat, duelMasters, dribbleKings, ballWinners,
+    aerialDominance, gkWall, bigChanceWasters,
+    syncStatus,
+  } = loaderData;
 
   const hasData =
     clinical.length > 0 ||
     topXg.length > 0 ||
     topXa.length > 0;
+
+  const intFormatter = (v: number) => String(Math.round(v));
+  const signedFormatter = (v: number) =>
+    `${v > 0 ? "+" : ""}${formatStat(v)}`;
 
   return (
     <div className="min-h-screen" style={{ background: "#0D9488" }}>
@@ -123,18 +148,15 @@ export default function StatCornerPage({ loaderData }: Route.ComponentProps) {
                 title="Most Clinical Finishers"
                 metric="overperformance"
                 players={clinical}
-                formatter={(v) =>
-                  `${v > 0 ? "+" : ""}${formatStat(v)}`
-                }
+                formatter={signedFormatter}
               />
             </section>
 
-            {/* Two-column grid */}
+            {/* Attacking: xG & xA */}
             <div
               className="grid md:grid-cols-2 gap-6 kit-animate-slide-up"
               style={{ "--delay": "400ms" } as React.CSSProperties}
             >
-              {/* Top xG */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp size={20} className="text-white" />
@@ -147,7 +169,6 @@ export default function StatCornerPage({ loaderData }: Route.ComponentProps) {
                 />
               </section>
 
-              {/* Top xA */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles size={20} className="text-white" />
@@ -161,12 +182,53 @@ export default function StatCornerPage({ loaderData }: Route.ComponentProps) {
               </section>
             </div>
 
-            {/* Defensive & Creative */}
+            {/* Creative: Chance Creators & Box Threat */}
             <div
               className="grid md:grid-cols-2 gap-6 kit-animate-slide-up"
               style={{ "--delay": "500ms" } as React.CSSProperties}
             >
-              {/* CBIT */}
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    Creative Engines
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Chances Created
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Top Chance Creators"
+                  metric="chances_created"
+                  players={topSca}
+                  formatter={intFormatter}
+                />
+              </section>
+
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Crosshair size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    Box Threat
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Touches in Opposition Box
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Most Dangerous in the Box"
+                  metric="touches_opposition_box"
+                  players={boxThreat}
+                  formatter={intFormatter}
+                />
+              </section>
+            </div>
+
+            {/* Defensive: CBIT & Ball Winners */}
+            <div
+              className="grid md:grid-cols-2 gap-6 kit-animate-slide-up"
+              style={{ "--delay": "600ms" } as React.CSSProperties}
+            >
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <Shield size={20} className="text-white" />
@@ -179,29 +241,134 @@ export default function StatCornerPage({ loaderData }: Route.ComponentProps) {
                   title="Top Defensive Contributors"
                   metric="cbit"
                   players={topCbit}
-                  formatter={(v) => String(Math.round(v))}
+                  formatter={intFormatter}
                 />
               </section>
 
-              {/* SCA */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
-                  <Sparkles size={20} className="text-white" />
+                  <Hand size={20} className="text-white" />
                   <h2 className="kit-headline text-lg text-white">
-                    Creative Engines
+                    Ball Winners
                   </h2>
                   <span className="text-xs text-white/50 ml-2">
-                    Shot-Creating Actions
+                    Recoveries
                   </span>
                 </div>
                 <MetricLeaderboard
-                  title="Top Shot Creators"
-                  metric="sca"
-                  players={topSca}
-                  formatter={(v) => String(Math.round(v))}
+                  title="Top Ball Recoverers"
+                  metric="recoveries"
+                  players={ballWinners}
+                  formatter={intFormatter}
                 />
               </section>
             </div>
+
+            {/* Physical: Duel Masters & Dribble Kings */}
+            <div
+              className="grid md:grid-cols-2 gap-6 kit-animate-slide-up"
+              style={{ "--delay": "700ms" } as React.CSSProperties}
+            >
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Swords size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    Duel Masters
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Duels Won
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Top Duel Winners"
+                  metric="duels_won"
+                  players={duelMasters}
+                  formatter={intFormatter}
+                />
+              </section>
+
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    Dribble Kings
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Successful Dribbles
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Top Dribblers"
+                  metric="successful_dribbles"
+                  players={dribbleKings}
+                  formatter={intFormatter}
+                />
+              </section>
+            </div>
+
+            {/* Aerial & GK */}
+            <div
+              className="grid md:grid-cols-2 gap-6 kit-animate-slide-up"
+              style={{ "--delay": "800ms" } as React.CSSProperties}
+            >
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    Aerial Dominance
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Aerial Duels Won
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Heading Specialists"
+                  metric="aerial_duels_won"
+                  players={aerialDominance}
+                  formatter={intFormatter}
+                />
+              </section>
+
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield size={20} className="text-white" />
+                  <h2 className="kit-headline text-lg text-white">
+                    GK Wall
+                  </h2>
+                  <span className="text-xs text-white/50 ml-2">
+                    Goals Prevented (xGOT - GC)
+                  </span>
+                </div>
+                <MetricLeaderboard
+                  title="Shot-Stopping Heroes"
+                  metric="goals_prevented"
+                  players={gkWall}
+                  formatter={signedFormatter}
+                />
+              </section>
+            </div>
+
+            {/* Fun: Big Chance Wasters */}
+            <section
+              className="kit-animate-slide-up"
+              style={{ "--delay": "900ms" } as React.CSSProperties}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <CircleOff size={20} className="text-white" />
+                <h2 className="kit-headline text-xl text-white">
+                  Big Chance Wasters
+                </h2>
+                <span className="text-xs text-white/50 ml-2">
+                  Clear-Cut Chances Missed
+                </span>
+              </div>
+              <MetricLeaderboard
+                title="Most Big Chances Missed"
+                metric="big_chances_missed"
+                players={bigChanceWasters}
+                formatter={intFormatter}
+              />
+            </section>
           </div>
         )}
       </div>

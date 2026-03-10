@@ -25,7 +25,11 @@ const COMPARE_METRICS: CompareMetric[] = [
   { label: "xG/90", getValue: (p) => p.xgPer90 },
   { label: "xA/90", getValue: (p) => p.xaPer90 },
   { label: "CBIT", getValue: (p) => p.totalCbit, format: (v) => String(v) },
-  { label: "SCA", getValue: (p) => p.totalSca, format: (v) => String(v) },
+  { label: "Chances Created", getValue: (p) => p.totalChancesCreated, format: (v) => String(v) },
+  { label: "Duels Won", getValue: (p) => p.totalDuelsWon, format: (v) => String(v) },
+  { label: "Dribbles", getValue: (p) => p.totalSuccessfulDribbles, format: (v) => String(v) },
+  { label: "Recoveries", getValue: (p) => p.totalRecoveries, format: (v) => String(v) },
+  { label: "Box Touches", getValue: (p) => p.totalTouchesOppositionBox, format: (v) => String(v) },
   { label: "FPL Pts", getValue: (p) => p.totalFplPoints, format: (v) => String(v) },
 ];
 

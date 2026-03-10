@@ -81,6 +81,15 @@ describe("calculateFormTrend", () => {
       progressive_carries: 0,
       sca: 0,
       fpl_points,
+      chances_created: 0,
+      successful_dribbles: 0,
+      touches_opposition_box: 0,
+      recoveries: 0,
+      duels_won: 0,
+      aerial_duels_won: 0,
+      big_chances_missed: 0,
+      goals_prevented: 0,
+      defensive_contributions: 0,
     };
   }
 

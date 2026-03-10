@@ -63,16 +63,31 @@ export function PlayerStatCard({ player }: PlayerStatCardProps) {
       </div>
 
       {/* Advanced metrics (if available) */}
-      {(player.totalCbit > 0 || player.totalSca > 0) && (
+      {(player.totalCbit > 0 || player.totalChancesCreated > 0) && (
         <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100">
           {player.totalCbit > 0 && (
             <StatBox label="CBIT" value={String(player.totalCbit)} />
           )}
-          {player.totalSca > 0 && (
-            <StatBox label="SCA" value={String(player.totalSca)} />
+          {player.totalChancesCreated > 0 && (
+            <StatBox label="Chances" value={String(player.totalChancesCreated)} />
           )}
-          {player.totalProgressiveCarries > 0 && (
-            <StatBox label="Prog. Carries" value={String(player.totalProgressiveCarries)} />
+          {player.totalRecoveries > 0 && (
+            <StatBox label="Recoveries" value={String(player.totalRecoveries)} />
+          )}
+        </div>
+      )}
+
+      {/* Physical metrics */}
+      {(player.totalDuelsWon > 0 || player.totalSuccessfulDribbles > 0) && (
+        <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100">
+          {player.totalDuelsWon > 0 && (
+            <StatBox label="Duels Won" value={String(player.totalDuelsWon)} />
+          )}
+          {player.totalSuccessfulDribbles > 0 && (
+            <StatBox label="Dribbles" value={String(player.totalSuccessfulDribbles)} />
+          )}
+          {player.totalTouchesOppositionBox > 0 && (
+            <StatBox label="Box Touches" value={String(player.totalTouchesOppositionBox)} />
           )}
         </div>
       )}

@@ -19,7 +19,7 @@ export interface PlayerRecord {
 export interface GameweekStat {
   id: string;
   player: string; // Relation ID
-  gw: number; // 0 = season aggregate (FBRef), 1+ = per-gameweek
+  gw: number; // 0 = season aggregate, 1+ = per-gameweek
   minutes: number;
   goals: number;
   assists: number;
@@ -33,6 +33,16 @@ export interface GameweekStat {
   progressive_carries: number;
   sca: number;
   fpl_points: number;
+  // Fields from FPL-Core-Insights
+  chances_created: number;
+  successful_dribbles: number;
+  touches_opposition_box: number;
+  recoveries: number;
+  duels_won: number;
+  aerial_duels_won: number;
+  big_chances_missed: number;
+  goals_prevented: number;
+  defensive_contributions: number;
 }
 
 /** PocketBase ``price_history`` collection record. */
@@ -49,7 +59,7 @@ export interface PriceSnapshot {
 /** PocketBase ``sync_log`` collection record. */
 export interface SyncLogEntry {
   id: string;
-  service: "fpl_sync" | "understat" | "fbref";
+  service: "fpl_sync" | "understat" | "fbref" | "fplcore";
   status: "success" | "error";
   records_processed: number;
   duration_seconds: number;
@@ -82,6 +92,16 @@ export interface PlayerStatSummary {
   /** Per-90-minute CBIT. */
   cbitPer90: number;
   gameweeks: number;
+  // Aggregated fields from FPL-Core-Insights
+  totalChancesCreated: number;
+  totalSuccessfulDribbles: number;
+  totalTouchesOppositionBox: number;
+  totalRecoveries: number;
+  totalDuelsWon: number;
+  totalAerialDuelsWon: number;
+  totalBigChancesMissed: number;
+  totalGoalsPrevented: number;
+  totalDefensiveContributions: number;
 }
 
 /** Metric used for leaderboards. */
@@ -94,4 +114,13 @@ export type StatMetric =
   | "sca"
   | "progressive_carries"
   | "ball_recoveries"
-  | "fpl_points";
+  | "fpl_points"
+  | "chances_created"
+  | "successful_dribbles"
+  | "touches_opposition_box"
+  | "recoveries"
+  | "duels_won"
+  | "aerial_duels_won"
+  | "big_chances_missed"
+  | "goals_prevented"
+  | "defensive_contributions";
