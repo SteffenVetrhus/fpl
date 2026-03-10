@@ -2,14 +2,19 @@
 
 Scrapes progressive carries, shot-creating actions (SCA), and ball
 recoveries from FBRef's stats tables.
+
+Uses Playwright to run a real Chromium browser, which is required to
+pass Cloudflare's JavaScript challenge on fbref.com.
 """
 
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
+from typing import Generator
 
-import httpx
 from bs4 import BeautifulSoup
+from playwright.sync_api import Browser, Page, sync_playwright
 
 from src.delay import human_delay_range
 from src.pb_client import get_all_players, upsert_gameweek_stat
@@ -20,68 +25,76 @@ logger = logging.getLogger(__name__)
 FBREF_BASE = "https://fbref.com"
 EPL_SEASON_URL = f"{FBREF_BASE}/en/comps/9/2025-2026/stats/2025-2026-Premier-League-Stats"
 
-_BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
-        "application/signed-exchange;v=b3;q=0.7"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "DNT": "1",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Sec-CH-UA": '"Chromium";v="133", "Not(A:Brand";v="99", "Google Chrome";v="133"',
-    "Sec-CH-UA-Mobile": "?0",
-    "Sec-CH-UA-Platform": '"Linux"',
-    "Cache-Control": "max-age=0",
-    "Referer": "https://www.google.com/",
-}
-
 MAX_RETRIES = 4
 INITIAL_BACKOFF = 4
 
-
-def _create_client() -> httpx.Client:
-    """Create an httpx client with browser-like headers."""
-    return httpx.Client(
-        headers=_BROWSER_HEADERS,
-        follow_redirects=True,
-        timeout=30.0,
-        http2=True,
-    )
+# Cloudflare challenge typically resolves within 10s; we wait up to 30s.
+CF_CHALLENGE_TIMEOUT_MS = 30_000
 
 
-def _fetch_page(client: httpx.Client, url: str) -> str:
+@contextmanager
+def _create_browser() -> Generator[Browser, None, None]:
+    """Launch a headless Chromium browser via Playwright."""
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        try:
+            yield browser
+        finally:
+            browser.close()
+
+
+def _wait_for_cloudflare(page: Page) -> None:
+    """Wait for Cloudflare challenge to resolve, if present."""
+    try:
+        page.wait_for_function(
+            """() => {
+                const title = document.title || '';
+                return !title.includes('Just a moment')
+                    && !title.includes('Checking')
+                    && !title.includes('Attention Required');
+            }""",
+            timeout=CF_CHALLENGE_TIMEOUT_MS,
+        )
+    except Exception:
+        logger.warning(
+            "Cloudflare challenge did not resolve within %ds, "
+            "proceeding anyway...",
+            CF_CHALLENGE_TIMEOUT_MS // 1000,
+        )
+
+
+def _fetch_page(page: Page, url: str) -> str:
     """Fetch an HTML page from FBRef with retry and exponential backoff."""
-    last_exc: httpx.HTTPStatusError | None = None
+    last_exc: Exception | None = None
     for attempt in range(MAX_RETRIES + 1):
         try:
-            resp = client.get(url)
-            resp.raise_for_status()
-            return resp.text
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
+            resp = page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+            _wait_for_cloudflare(page)
+
+            status = resp.status if resp else 0
+            if status == 403 or status == 429:
+                raise RuntimeError(
+                    f"FBRef returned HTTP {status} for {url}"
+                )
+
+            # Wait for stat tables to appear (they may load via JS).
+            page.wait_for_selector("table", timeout=15_000)
+            return page.content()
+
+        except Exception as exc:
             last_exc = exc
-            if (status == 429 or status == 403) and attempt < MAX_RETRIES:
+            if attempt < MAX_RETRIES:
                 low = INITIAL_BACKOFF * (2 ** attempt)
                 high = low + 3
                 logger.warning(
-                    "FBRef returned %d for %s (attempt %d/%d), "
+                    "FBRef fetch failed for %s (attempt %d/%d): %s — "
                     "retrying in %d-%ds...",
-                    status, url, attempt + 1, MAX_RETRIES + 1, low, high,
+                    url, attempt + 1, MAX_RETRIES + 1, exc, low, high,
                 )
                 human_delay_range(low, high)
             else:
                 raise
+
     raise last_exc  # type: ignore[misc]
 
 
@@ -94,9 +107,6 @@ def _parse_stat_table(
     table = soup.find("table", id=table_id)
 
     if table is None:
-        import re
-        for comment in soup.find_all(string=lambda t: isinstance(t, type(soup.new_string(""))) is False):
-            pass
         comments = soup.find_all(
             string=lambda text: text and table_id in str(text)
         )
@@ -136,27 +146,27 @@ def _parse_stat_table(
     return rows
 
 
-def fetch_possession_stats(client: httpx.Client) -> list[dict[str, str]]:
+def _fetch_possession_stats(page: Page) -> list[dict[str, str]]:
     """Fetch possession/carrying stats (progressive carries)."""
     logger.info("Fetching FBRef possession stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/possession/")
-    html = _fetch_page(client, url)
+    html = _fetch_page(page, url)
     return _parse_stat_table(html, "stats_possession")
 
 
-def fetch_gca_stats(client: httpx.Client) -> list[dict[str, str]]:
+def _fetch_gca_stats(page: Page) -> list[dict[str, str]]:
     """Fetch goal and shot creation stats (SCA)."""
     logger.info("Fetching FBRef GCA stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/gca/")
-    html = _fetch_page(client, url)
+    html = _fetch_page(page, url)
     return _parse_stat_table(html, "stats_gca")
 
 
-def fetch_defense_stats(client: httpx.Client) -> list[dict[str, str]]:
+def _fetch_defense_stats(page: Page) -> list[dict[str, str]]:
     """Fetch defensive stats (tackles, blocks, interceptions, recoveries)."""
     logger.info("Fetching FBRef defensive stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/defense/")
-    html = _fetch_page(client, url)
+    html = _fetch_page(page, url)
     return _parse_stat_table(html, "stats_defense")
 
 
@@ -167,56 +177,58 @@ def _safe_int(value: str, default: int = 0) -> int:
         return default
 
 
-def _safe_float(value: str, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return default
-
-
 def run() -> int:
     """Run the FBRef sync pipeline. Returns records processed."""
     logger.info("Starting FBRef sync...")
-    client = _create_client()
     players_pb = get_all_players()
     count = 0
 
     player_stats: dict[str, dict] = {}
 
-    human_delay_range(3, 6)
-    for row in fetch_possession_stats(client):
-        key = f"{row.get('player', '')}|{row.get('team', '')}"
-        player_stats.setdefault(key, {}).update({
-            "player_name": row.get("player", ""),
-            "team": row.get("team", ""),
-            "fbref_id": row.get("fbref_id", ""),
-            "progressive_carries": _safe_int(row.get("progressive_carries", "0")),
-        })
+    with _create_browser() as browser:
+        context = browser.new_context(
+            locale="en-US",
+            timezone_id="Europe/London",
+            viewport={"width": 1920, "height": 1080},
+        )
+        page = context.new_page()
 
-    human_delay_range(5, 10)
-    for row in fetch_gca_stats(client):
-        key = f"{row.get('player', '')}|{row.get('team', '')}"
-        player_stats.setdefault(key, {}).update({
-            "player_name": row.get("player", ""),
-            "team": row.get("team", ""),
-            "fbref_id": row.get("fbref_id", ""),
-            "sca": _safe_int(row.get("sca", "0")),
-        })
+        human_delay_range(3, 6)
+        for row in _fetch_possession_stats(page):
+            key = f"{row.get('player', '')}|{row.get('team', '')}"
+            player_stats.setdefault(key, {}).update({
+                "player_name": row.get("player", ""),
+                "team": row.get("team", ""),
+                "fbref_id": row.get("fbref_id", ""),
+                "progressive_carries": _safe_int(row.get("progressive_carries", "0")),
+            })
 
-    human_delay_range(5, 10)
-    for row in fetch_defense_stats(client):
-        key = f"{row.get('player', '')}|{row.get('team', '')}"
-        tackles = _safe_int(row.get("tackles", "0"))
-        blocks = _safe_int(row.get("blocks", "0"))
-        interceptions = _safe_int(row.get("interceptions", "0"))
-        clearances = _safe_int(row.get("clearances", "0"))
-        player_stats.setdefault(key, {}).update({
-            "player_name": row.get("player", ""),
-            "team": row.get("team", ""),
-            "fbref_id": row.get("fbref_id", ""),
-            "cbit": tackles + blocks + interceptions + clearances,
-            "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
-        })
+        human_delay_range(5, 10)
+        for row in _fetch_gca_stats(page):
+            key = f"{row.get('player', '')}|{row.get('team', '')}"
+            player_stats.setdefault(key, {}).update({
+                "player_name": row.get("player", ""),
+                "team": row.get("team", ""),
+                "fbref_id": row.get("fbref_id", ""),
+                "sca": _safe_int(row.get("sca", "0")),
+            })
+
+        human_delay_range(5, 10)
+        for row in _fetch_defense_stats(page):
+            key = f"{row.get('player', '')}|{row.get('team', '')}"
+            tackles = _safe_int(row.get("tackles", "0"))
+            blocks = _safe_int(row.get("blocks", "0"))
+            interceptions = _safe_int(row.get("interceptions", "0"))
+            clearances = _safe_int(row.get("clearances", "0"))
+            player_stats.setdefault(key, {}).update({
+                "player_name": row.get("player", ""),
+                "team": row.get("team", ""),
+                "fbref_id": row.get("fbref_id", ""),
+                "cbit": tackles + blocks + interceptions + clearances,
+                "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
+            })
+
+        context.close()
 
     for stats in player_stats.values():
         name = stats.get("player_name", "")
