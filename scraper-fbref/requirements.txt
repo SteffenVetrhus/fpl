@@ -1,4 +1,5 @@
 pocketbase>=0.13.0
 beautifulsoup4>=4.12.0
 rapidfuzz>=3.6.0
+cloudscraper>=1.2.71
 camoufox>=0.4.0

@@ -3,21 +3,26 @@
 Scrapes progressive carries, shot-creating actions (SCA), and ball
 recoveries from FBRef's stats tables.
 
-Uses Camoufox (anti-detect Firefox) in virtual display mode to pass
-Cloudflare's JavaScript challenge on fbref.com. Headless mode gets
-detected even with camoufox, so we use Xvfb to run a full headed
-browser without a physical screen.
+Two-layer approach to bypass Cloudflare:
+1. Primary: cloudscraper — lightweight, uses proper TLS fingerprints
+   and solves CF JS challenges without a full browser.
+2. Fallback: Camoufox (anti-detect Firefox) with Xvfb virtual display
+   for complex challenges that require a real browser.
+
+Both layers support an optional PROXY_URL for residential proxy routing,
+which is often required when running from datacenter IPs.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import time
 
+import cloudscraper
 from bs4 import BeautifulSoup
-from camoufox.sync_api import Camoufox
-from playwright.sync_api import BrowserContext, Page
+from playwright.sync_api import Page
 
 from src.delay import human_delay_range
 from src.pb_client import get_all_players, upsert_gameweek_stat
@@ -31,11 +36,88 @@ EPL_SEASON_URL = f"{FBREF_BASE}/en/comps/9/2025-2026/stats/2025-2026-Premier-Lea
 MAX_RETRIES = 4
 INITIAL_BACKOFF = 4
 
+PROXY_URL = os.getenv("PROXY_URL", "")
+
 # Cloudflare challenge typically resolves within 10s; we wait up to 30s.
 CF_CHALLENGE_TIMEOUT_MS = 30_000
 
 _xvfb_proc: subprocess.Popen | None = None
 
+
+# ---------------------------------------------------------------------------
+# Layer 1: cloudscraper (lightweight, no browser needed)
+# ---------------------------------------------------------------------------
+
+def _create_scraper() -> cloudscraper.CloudScraper:
+    """Create a cloudscraper session with optional proxy."""
+    scraper = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "linux", "desktop": True},
+    )
+    if PROXY_URL:
+        scraper.proxies = {"http": PROXY_URL, "https": PROXY_URL}
+        logger.info("cloudscraper using proxy: %s", PROXY_URL.split("@")[-1])
+    return scraper
+
+
+def _fetch_page_cloudscraper(scraper: cloudscraper.CloudScraper, url: str) -> str:
+    """Fetch a page via cloudscraper with retry."""
+    last_exc: Exception | None = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = scraper.get(url, timeout=30)
+            if resp.status_code in (403, 429):
+                raise RuntimeError(
+                    f"FBRef returned HTTP {resp.status_code} for {url}"
+                )
+            resp.raise_for_status()
+            return resp.text
+        except Exception as exc:
+            last_exc = exc
+            if attempt < MAX_RETRIES:
+                low = INITIAL_BACKOFF * (2 ** attempt)
+                high = low + 3
+                logger.warning(
+                    "cloudscraper fetch failed for %s (attempt %d/%d): %s — "
+                    "retrying in %d-%ds...",
+                    url, attempt + 1, MAX_RETRIES + 1, exc, low, high,
+                )
+                human_delay_range(low, high)
+            else:
+                raise
+    raise last_exc  # type: ignore[misc]
+
+
+def _try_cloudscraper() -> dict[str, str] | None:
+    """Try fetching all stats via cloudscraper. Returns None on failure."""
+    logger.info("Attempting cloudscraper (lightweight CF solver)...")
+    try:
+        scraper = _create_scraper()
+        pages: dict[str, str] = {}
+
+        human_delay_range(1, 3)
+        url = EPL_SEASON_URL.replace("/stats/", "/possession/")
+        logger.info("Fetching FBRef possession stats (cloudscraper)...")
+        pages["possession"] = _fetch_page_cloudscraper(scraper, url)
+
+        human_delay_range(5, 10)
+        url = EPL_SEASON_URL.replace("/stats/", "/gca/")
+        logger.info("Fetching FBRef GCA stats (cloudscraper)...")
+        pages["gca"] = _fetch_page_cloudscraper(scraper, url)
+
+        human_delay_range(5, 10)
+        url = EPL_SEASON_URL.replace("/stats/", "/defense/")
+        logger.info("Fetching FBRef defensive stats (cloudscraper)...")
+        pages["defense"] = _fetch_page_cloudscraper(scraper, url)
+
+        return pages
+    except Exception as exc:
+        logger.warning("cloudscraper failed: %s — falling back to browser.", exc)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Layer 2: Camoufox browser fallback
+# ---------------------------------------------------------------------------
 
 def _ensure_xvfb() -> None:
     """Start Xvfb on :99 if not already running."""
@@ -49,7 +131,6 @@ def _ensure_xvfb() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    # Give Xvfb time to start.
     time.sleep(1)
     if _xvfb_proc.poll() is not None:
         raise RuntimeError(
@@ -78,7 +159,6 @@ def _solve_cloudflare(page: Page) -> None:
     except Exception:
         logger.debug("No Turnstile checkbox found, waiting for auto-resolve")
 
-    # Wait for the challenge page to go away.
     try:
         page.wait_for_function(
             """() => {
@@ -97,8 +177,8 @@ def _solve_cloudflare(page: Page) -> None:
         )
 
 
-def _fetch_page(page: Page, url: str) -> str:
-    """Fetch an HTML page from FBRef with retry and exponential backoff."""
+def _fetch_page_browser(page: Page, url: str) -> str:
+    """Fetch an HTML page via Camoufox browser with retry."""
     last_exc: Exception | None = None
     for attempt in range(MAX_RETRIES + 1):
         try:
@@ -111,7 +191,6 @@ def _fetch_page(page: Page, url: str) -> str:
                     f"FBRef returned HTTP {status} for {url}"
                 )
 
-            # Wait for stat tables to appear (they may load via JS).
             page.wait_for_selector("table", timeout=15_000)
             return page.content()
 
@@ -121,7 +200,7 @@ def _fetch_page(page: Page, url: str) -> str:
                 low = INITIAL_BACKOFF * (2 ** attempt)
                 high = low + 3
                 logger.warning(
-                    "FBRef fetch failed for %s (attempt %d/%d): %s — "
+                    "Browser fetch failed for %s (attempt %d/%d): %s — "
                     "retrying in %d-%ds...",
                     url, attempt + 1, MAX_RETRIES + 1, exc, low, high,
                 )
@@ -131,6 +210,51 @@ def _fetch_page(page: Page, url: str) -> str:
 
     raise last_exc  # type: ignore[misc]
 
+
+def _try_browser() -> dict[str, str]:
+    """Fetch all stats via Camoufox browser."""
+    from camoufox.sync_api import Camoufox
+
+    logger.info("Attempting Camoufox browser fallback...")
+    _ensure_xvfb()
+
+    proxy_config = None
+    if PROXY_URL:
+        proxy_config = {"server": PROXY_URL}
+        logger.info("Camoufox using proxy: %s", PROXY_URL.split("@")[-1])
+
+    pages: dict[str, str] = {}
+
+    with Camoufox(
+        headless=False,
+        virtual_display=":99",
+        disable_coop=True,
+        os="linux",
+        proxy=proxy_config,
+    ) as context:
+        page = context.new_page()
+
+        human_delay_range(3, 6)
+        url = EPL_SEASON_URL.replace("/stats/", "/possession/")
+        logger.info("Fetching FBRef possession stats (browser)...")
+        pages["possession"] = _fetch_page_browser(page, url)
+
+        human_delay_range(5, 10)
+        url = EPL_SEASON_URL.replace("/stats/", "/gca/")
+        logger.info("Fetching FBRef GCA stats (browser)...")
+        pages["gca"] = _fetch_page_browser(page, url)
+
+        human_delay_range(5, 10)
+        url = EPL_SEASON_URL.replace("/stats/", "/defense/")
+        logger.info("Fetching FBRef defensive stats (browser)...")
+        pages["defense"] = _fetch_page_browser(page, url)
+
+    return pages
+
+
+# ---------------------------------------------------------------------------
+# Parsing (shared by both layers)
+# ---------------------------------------------------------------------------
 
 def _parse_stat_table(
     html: str, table_id: str,
@@ -180,30 +304,6 @@ def _parse_stat_table(
     return rows
 
 
-def _fetch_possession_stats(page: Page) -> list[dict[str, str]]:
-    """Fetch possession/carrying stats (progressive carries)."""
-    logger.info("Fetching FBRef possession stats...")
-    url = EPL_SEASON_URL.replace("/stats/", "/possession/")
-    html = _fetch_page(page, url)
-    return _parse_stat_table(html, "stats_possession")
-
-
-def _fetch_gca_stats(page: Page) -> list[dict[str, str]]:
-    """Fetch goal and shot creation stats (SCA)."""
-    logger.info("Fetching FBRef GCA stats...")
-    url = EPL_SEASON_URL.replace("/stats/", "/gca/")
-    html = _fetch_page(page, url)
-    return _parse_stat_table(html, "stats_gca")
-
-
-def _fetch_defense_stats(page: Page) -> list[dict[str, str]]:
-    """Fetch defensive stats (tackles, blocks, interceptions, recoveries)."""
-    logger.info("Fetching FBRef defensive stats...")
-    url = EPL_SEASON_URL.replace("/stats/", "/defense/")
-    html = _fetch_page(page, url)
-    return _parse_stat_table(html, "stats_defense")
-
-
 def _safe_int(value: str, default: int = 0) -> int:
     try:
         return int(value)
@@ -211,58 +311,54 @@ def _safe_int(value: str, default: int = 0) -> int:
         return default
 
 
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
+
 def run() -> int:
     """Run the FBRef sync pipeline. Returns records processed."""
     logger.info("Starting FBRef sync...")
     players_pb = get_all_players()
     count = 0
 
+    # Try cloudscraper first (fast, lightweight), fall back to browser.
+    pages = _try_cloudscraper()
+    if pages is None:
+        pages = _try_browser()
+
     player_stats: dict[str, dict] = {}
 
-    _ensure_xvfb()
+    for row in _parse_stat_table(pages["possession"], "stats_possession"):
+        key = f"{row.get('player', '')}|{row.get('team', '')}"
+        player_stats.setdefault(key, {}).update({
+            "player_name": row.get("player", ""),
+            "team": row.get("team", ""),
+            "fbref_id": row.get("fbref_id", ""),
+            "progressive_carries": _safe_int(row.get("progressive_carries", "0")),
+        })
 
-    with Camoufox(
-        headless=False,
-        virtual_display=":99",
-        disable_coop=True,
-        os="linux",
-    ) as context:
-        page = context.new_page()
+    for row in _parse_stat_table(pages["gca"], "stats_gca"):
+        key = f"{row.get('player', '')}|{row.get('team', '')}"
+        player_stats.setdefault(key, {}).update({
+            "player_name": row.get("player", ""),
+            "team": row.get("team", ""),
+            "fbref_id": row.get("fbref_id", ""),
+            "sca": _safe_int(row.get("sca", "0")),
+        })
 
-        human_delay_range(3, 6)
-        for row in _fetch_possession_stats(page):
-            key = f"{row.get('player', '')}|{row.get('team', '')}"
-            player_stats.setdefault(key, {}).update({
-                "player_name": row.get("player", ""),
-                "team": row.get("team", ""),
-                "fbref_id": row.get("fbref_id", ""),
-                "progressive_carries": _safe_int(row.get("progressive_carries", "0")),
-            })
-
-        human_delay_range(5, 10)
-        for row in _fetch_gca_stats(page):
-            key = f"{row.get('player', '')}|{row.get('team', '')}"
-            player_stats.setdefault(key, {}).update({
-                "player_name": row.get("player", ""),
-                "team": row.get("team", ""),
-                "fbref_id": row.get("fbref_id", ""),
-                "sca": _safe_int(row.get("sca", "0")),
-            })
-
-        human_delay_range(5, 10)
-        for row in _fetch_defense_stats(page):
-            key = f"{row.get('player', '')}|{row.get('team', '')}"
-            tackles = _safe_int(row.get("tackles", "0"))
-            blocks = _safe_int(row.get("blocks", "0"))
-            interceptions = _safe_int(row.get("interceptions", "0"))
-            clearances = _safe_int(row.get("clearances", "0"))
-            player_stats.setdefault(key, {}).update({
-                "player_name": row.get("player", ""),
-                "team": row.get("team", ""),
-                "fbref_id": row.get("fbref_id", ""),
-                "cbit": tackles + blocks + interceptions + clearances,
-                "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
-            })
+    for row in _parse_stat_table(pages["defense"], "stats_defense"):
+        key = f"{row.get('player', '')}|{row.get('team', '')}"
+        tackles = _safe_int(row.get("tackles", "0"))
+        blocks = _safe_int(row.get("blocks", "0"))
+        interceptions = _safe_int(row.get("interceptions", "0"))
+        clearances = _safe_int(row.get("clearances", "0"))
+        player_stats.setdefault(key, {}).update({
+            "player_name": row.get("player", ""),
+            "team": row.get("team", ""),
+            "fbref_id": row.get("fbref_id", ""),
+            "cbit": tackles + blocks + interceptions + clearances,
+            "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
+        })
 
     for stats in player_stats.values():
         name = stats.get("player_name", "")
