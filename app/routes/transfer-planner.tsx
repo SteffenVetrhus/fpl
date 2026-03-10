@@ -1239,7 +1239,7 @@ export default function TransferPlannerPage({
               </div>
 
               {/* GW Pills */}
-              <div className="flex gap-1 overflow-x-auto pb-2 mb-4 -mx-2 px-2">
+              <div className="flex gap-1 overflow-x-auto pt-2 pb-2 mb-4 -mx-2 px-2">
                 {upcomingGWs.map((gw, idx) => {
                   const gwPlan = plan.gameweeks[gw.toString()];
                   const hasTransfers =
