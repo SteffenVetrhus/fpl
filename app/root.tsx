@@ -358,12 +358,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        {plausibleDomain && plausibleScriptUrl && (
-          <script
-            defer
-            data-domain={plausibleDomain}
-            src={plausibleScriptUrl}
-          />
+        {plausibleScriptUrl && (
+          <>
+            <script async src={plausibleScriptUrl} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`,
+              }}
+            />
+          </>
         )}
       </head>
       <body>
