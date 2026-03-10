@@ -395,10 +395,9 @@ html, body {
 
 @media (max-width: 640px) {
   .kit-deadline-timer {
-    top: auto;
-    bottom: 1rem;
     left: 50%;
     transform: translateX(-50%);
+    white-space: nowrap;
     font-size: 0.6875rem;
   }
 }
