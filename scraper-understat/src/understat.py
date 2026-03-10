@@ -1,7 +1,6 @@
-"""Service 2: Understat scraper.
+"""Understat scraper service.
 
-Understat serves data via internal AJAX endpoints that return JSON directly.
-This service fetches per-match xG, npxG, xA, and shot counts for EPL players,
+Fetches per-match xG, npxG, xA, and shot counts for EPL players,
 maps matches to FPL gameweeks by date, then updates ``gameweek_stats`` in
 PocketBase.
 """
@@ -21,20 +20,15 @@ from src.player_matcher import match_player, update_player_external_id
 logger = logging.getLogger(__name__)
 
 UNDERSTAT_BASE = "https://understat.com"
-SEASON = "2025"  # Understat uses the start year of the season
+SEASON = "2025"
 
-# Required header for Understat's AJAX endpoints
 _AJAX_HEADERS = {
     "X-Requested-With": "XMLHttpRequest",
 }
 
 
 def _fetch_ajax(endpoint: str) -> dict | list:
-    """Fetch JSON from an Understat AJAX endpoint.
-
-    Understat's frontend loads data via internal endpoints that require the
-    ``X-Requested-With: XMLHttpRequest`` header.
-    """
+    """Fetch JSON from an Understat AJAX endpoint."""
     url = f"{UNDERSTAT_BASE}/{endpoint}"
     resp = httpx.get(url, headers=_AJAX_HEADERS, timeout=30, follow_redirects=True)
     resp.raise_for_status()
@@ -42,34 +36,21 @@ def _fetch_ajax(endpoint: str) -> dict | list:
 
 
 def fetch_league_players() -> list[dict]:
-    """Fetch all EPL player summary data for the current season.
-
-    Returns a list of player dicts with keys: id, player_name, team_title,
-    games, xG, npxG, xA, shots, etc.
-    """
+    """Fetch all EPL player summary data for the current season."""
     logger.info("Fetching Understat league data for EPL/%s", SEASON)
     data = _fetch_ajax(f"getLeagueData/EPL/{SEASON}")
     return data.get("players", [])
 
 
 def fetch_player_matches(understat_id: int) -> list[dict]:
-    """Fetch per-match data for a specific player from Understat.
-
-    Returns a list of match dicts with xG, npxG, xA, shots per match.
-    Only returns matches from the current season.
-    """
+    """Fetch per-match data for a specific player from Understat."""
     data = _fetch_ajax(f"getPlayerData/{understat_id}")
     matches = data.get("matches", [])
     return [m for m in matches if m.get("season") == SEASON]
 
 
 def _build_gameweek_date_map() -> list[tuple[int, datetime, datetime]]:
-    """Fetch FPL gameweek deadlines and build date ranges for each GW.
-
-    Returns a sorted list of (gw_number, start_datetime, end_datetime) tuples.
-    A match belongs to a gameweek if its date falls on or after that GW's
-    deadline and before the next GW's deadline.
-    """
+    """Fetch FPL gameweek deadlines and build date ranges for each GW."""
     resp = httpx.get(f"{FPL_API_BASE_URL}/bootstrap-static/", timeout=30)
     resp.raise_for_status()
     events = resp.json().get("events", [])
@@ -77,9 +58,6 @@ def _build_gameweek_date_map() -> list[tuple[int, datetime, datetime]]:
     ranges = []
     for i, ev in enumerate(events):
         gw = ev["id"]
-        # Use the start of the deadline day as the GW start, because Understat
-        # match dates have no time component (they resolve to midnight UTC) and
-        # FPL deadlines are typically set to the afternoon of the first match day.
         deadline = datetime.fromisoformat(
             ev["deadline_time"].replace("Z", "+00:00")
         )
@@ -90,7 +68,6 @@ def _build_gameweek_date_map() -> list[tuple[int, datetime, datetime]]:
             )
             end = next_deadline.replace(hour=0, minute=0, second=0, microsecond=0)
         else:
-            # Last gameweek — extend far into the future
             end = datetime(2099, 12, 31, tzinfo=timezone.utc)
         ranges.append((gw, start, end))
 
@@ -100,10 +77,7 @@ def _build_gameweek_date_map() -> list[tuple[int, datetime, datetime]]:
 def _match_date_to_gw(
     match_date: str, gw_ranges: list[tuple[int, datetime, datetime]]
 ) -> int | None:
-    """Map a match date string to an FPL gameweek using deadline ranges.
-
-    ``match_date`` is in ``YYYY-MM-DD`` format from Understat.
-    """
+    """Map a match date string to an FPL gameweek using deadline ranges."""
     try:
         dt = datetime.strptime(match_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
@@ -135,7 +109,6 @@ def run() -> int:
         if not us_name or not us_id:
             continue
 
-        # Try to find existing player with understat_id first
         matched = None
         for p in players_pb:
             uid = getattr(p, "understat_id", None)
@@ -143,17 +116,14 @@ def run() -> int:
                 matched = p
                 break
 
-        # Fall back to name matching
         if matched is None:
             matched = match_player("understat", us_name, us_team, players_pb)
 
         if matched is None:
             continue
 
-        # Store the understat_id for future lookups
         update_player_external_id(matched, "understat", us_id)
 
-        # Fetch per-match data for this player
         try:
             matches = fetch_player_matches(us_id)
         except Exception as exc:
@@ -175,7 +145,6 @@ def run() -> int:
             })
             count += 1
 
-        # Human-like delay between player page fetches
         human_delay(2.0, 1.0)
 
     logger.info("Understat sync complete: %d records", count)

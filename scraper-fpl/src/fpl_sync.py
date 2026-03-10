@@ -1,4 +1,4 @@
-"""Service 1: FPL API sync.
+"""FPL API sync service.
 
 Fetches player data from the official FPL API and populates the ``players``
 and ``price_history`` PocketBase collections.  Also pulls per-gameweek stats
@@ -17,6 +17,7 @@ from src.config import FPL_API_BASE_URL
 from src.delay import human_delay, human_delay_range
 from src.pb_client import (
     create_price_snapshot,
+    get_player_by_fpl_id,
     upsert_gameweek_stat,
     upsert_player,
 )
@@ -62,8 +63,6 @@ def sync_price_snapshots() -> int:
     logger.info("Creating price snapshots...")
     data = _fetch_json(f"{FPL_API_BASE_URL}/bootstrap-static/")
 
-    from src.pb_client import get_player_by_fpl_id
-
     count = 0
     now = datetime.now(timezone.utc).isoformat()
 
@@ -86,17 +85,9 @@ def sync_price_snapshots() -> int:
 
 
 def sync_element_summaries(batch_size: int = 50) -> int:
-    """Fetch per-player element summaries and populate gameweek_stats.
-
-    Only fetches for players with >0 minutes to avoid unnecessary API calls.
-    Includes a polite delay between requests to respect FPL rate limits.
-
-    Returns count of gameweek stat records created/updated.
-    """
+    """Fetch per-player element summaries and populate gameweek_stats."""
     logger.info("Fetching element summaries for gameweek stats...")
     data = _fetch_json(f"{FPL_API_BASE_URL}/bootstrap-static/")
-
-    from src.pb_client import get_player_by_fpl_id
 
     active_players = [el for el in data["elements"] if el.get("minutes", 0) > 0]
     logger.info("Found %d active players to process", len(active_players))
@@ -125,13 +116,12 @@ def sync_element_summaries(batch_size: int = 50) -> int:
                 "assists": gw_data.get("assists", 0),
                 "xg": float(gw_data.get("expected_goals", "0")),
                 "xa": float(gw_data.get("expected_assists", "0")),
-                "shots": 0,  # Not available in FPL API directly
+                "shots": 0,
                 "key_passes": 0,
                 "fpl_points": gw_data.get("total_points", 0),
             })
             count += 1
 
-        # Human-like rate limiting with jitter
         if (i + 1) % batch_size == 0:
             logger.info("Processed %d/%d players...", i + 1, len(active_players))
             human_delay_range(3, 6)
