@@ -1,18 +1,20 @@
 """FBRef / Opta advanced metrics parser.
 
-Reads locally saved FBRef HTML pages and extracts progressive carries,
+Reads locally saved FBRef HTML or MHT pages and extracts progressive carries,
 shot-creating actions (SCA), and ball recoveries.
 
 Workflow:
 1. Open the 3 FBRef stat pages in your browser
-2. Save each as HTML (Ctrl+S) into the data/ directory
+2. Save each as HTML (Ctrl+S) or MHT/MHTML (single-file archive) into data/
 3. Run the scraper — it reads the local files and syncs to PocketBase
 """
 
 from __future__ import annotations
 
+import email
 import logging
 import os
+import quopri
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -24,23 +26,67 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(os.getenv("FBREF_DATA_DIR", "/app/data"))
 
-# Expected filenames in DATA_DIR.
-POSSESSION_FILE = "possession.html"
-GCA_FILE = "gca.html"
-DEFENSE_FILE = "defense.html"
+# Base names (without extension) for each stat page.
+POSSESSION_FILE = "possession"
+GCA_FILE = "gca"
+DEFENSE_FILE = "defense"
+
+# Supported extensions in priority order.
+_EXTENSIONS = (".mht", ".mhtml", ".html")
 
 
-def _read_html(filename: str) -> str:
-    """Read an HTML file from the data directory."""
-    path = DATA_DIR / filename
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Missing {path} — save the FBRef page as HTML and place it "
-            f"in {DATA_DIR}/. Expected files: {POSSESSION_FILE}, "
-            f"{GCA_FILE}, {DEFENSE_FILE}"
-        )
-    logger.info("Reading %s (%d KB)", path, path.stat().st_size // 1024)
-    return path.read_text(encoding="utf-8", errors="replace")
+def _extract_html_from_mht(raw: bytes) -> str:
+    """Extract the HTML body from an MHT/MHTML archive."""
+    msg = email.message_from_bytes(raw)
+
+    # Walk all MIME parts, return the first text/html part.
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() == "text/html":
+                payload = part.get_payload(decode=True)
+                if payload:
+                    charset = part.get_content_charset() or "utf-8"
+                    return payload.decode(charset, errors="replace")
+
+    # Single-part MHT — decode the payload directly.
+    payload = msg.get_payload(decode=True)
+    if payload:
+        charset = msg.get_content_charset() or "utf-8"
+        return payload.decode(charset, errors="replace")
+
+    # Fallback: treat as quoted-printable text.
+    raw_payload = msg.get_payload()
+    if isinstance(raw_payload, str) and raw_payload.strip():
+        try:
+            return quopri.decodestring(raw_payload.encode()).decode(
+                "utf-8", errors="replace"
+            )
+        except Exception:
+            return raw_payload
+
+    raise ValueError("Could not extract HTML from MHT file")
+
+
+def _read_html(basename: str) -> str:
+    """Read an HTML or MHT file from the data directory.
+
+    Looks for ``<basename>.mht``, ``<basename>.mhtml``, or
+    ``<basename>.html`` (in that order).
+    """
+    for ext in _EXTENSIONS:
+        path = DATA_DIR / f"{basename}{ext}"
+        if path.exists():
+            logger.info("Reading %s (%d KB)", path, path.stat().st_size // 1024)
+            if ext in (".mht", ".mhtml"):
+                raw = path.read_bytes()
+                return _extract_html_from_mht(raw)
+            return path.read_text(encoding="utf-8", errors="replace")
+
+    expected = ", ".join(f"{basename}{e}" for e in _EXTENSIONS)
+    raise FileNotFoundError(
+        f"Missing data file for '{basename}' — save the FBRef page as HTML "
+        f"or MHT and place it in {DATA_DIR}/. Looked for: {expected}"
+    )
 
 
 def _parse_stat_table(
