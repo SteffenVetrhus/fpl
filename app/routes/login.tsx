@@ -10,6 +10,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (pb.authStore.isValid && pb.authStore.record) {
     try {
       await pb.collection("users").authRefresh();
+      if (!pb.authStore.record?.password_changed) {
+        throw redirect("/profile/change-password");
+      }
       throw redirect("/");
     } catch (err) {
       if (err instanceof Response) throw err;
@@ -44,7 +47,11 @@ export default function Login() {
         path: "/",
       }, "pb_auth");
 
-      navigate("/");
+      if (!pb.authStore.record?.password_changed) {
+        navigate("/profile/change-password");
+      } else {
+        navigate("/");
+      }
     } catch (err: unknown) {
       const pbErr = err as { status?: number; message?: string; response?: { message?: string } };
       console.error("[login] auth failed", {

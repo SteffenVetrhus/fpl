@@ -7,13 +7,21 @@ export interface AuthUser {
   fplManagerId: number;
   playerName: string;
   teamName: string;
+  passwordChanged: boolean;
+}
+
+export interface RequireAuthOptions {
+  allowPasswordUnchanged?: boolean;
 }
 
 /**
  * Require authentication in a loader. Redirects to /login if not authenticated.
  * Returns the authenticated user with FPL manager details.
  */
-export async function requireAuth(request: Request): Promise<AuthUser> {
+export async function requireAuth(
+  request: Request,
+  options?: RequireAuthOptions,
+): Promise<AuthUser> {
   const pb = createServerClient(request);
 
   if (!pb.authStore.isValid || !pb.authStore.record) {
@@ -28,13 +36,20 @@ export async function requireAuth(request: Request): Promise<AuthUser> {
 
   const record = pb.authStore.record;
 
-  return {
+  const user: AuthUser = {
     id: record.id,
     email: record.email,
     fplManagerId: record.fpl_manager_id,
     playerName: record.player_name,
     teamName: record.team_name,
+    passwordChanged: !!record.password_changed,
   };
+
+  if (!options?.allowPasswordUnchanged && !user.passwordChanged) {
+    throw redirect("/profile/change-password");
+  }
+
+  return user;
 }
 
 /**
@@ -61,5 +76,6 @@ export async function getOptionalAuth(request: Request): Promise<AuthUser | null
     fplManagerId: record.fpl_manager_id,
     playerName: record.player_name,
     teamName: record.team_name,
+    passwordChanged: !!record.password_changed,
   };
 }

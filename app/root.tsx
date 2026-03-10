@@ -184,13 +184,15 @@ function HamburgerMenu() {
               {user ? (
                 <div className="p-4 border-b border-white/10">
                   <div className="flex items-center gap-3 px-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
-                      <User size={16} color="white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{user.playerName}</p>
-                      <p className="text-xs text-white/40 truncate">{user.teamName}</p>
-                    </div>
+                    <NavLink to="/profile" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                      <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+                        <User size={16} color="white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{user.playerName}</p>
+                        <p className="text-xs text-white/40 truncate">{user.teamName}</p>
+                      </div>
+                    </NavLink>
                     <NavLink
                       to="/logout"
                       className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/60 hover:text-white"

@@ -96,6 +96,7 @@ async function main() {
         fpl_manager_id: member.entry,
         player_name: member.player_name,
         team_name: member.entry_name,
+        password_changed: false,
         emailVisibility: true,
         verified: true,
       });
