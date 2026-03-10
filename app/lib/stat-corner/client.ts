@@ -104,29 +104,41 @@ export async function fetchPriceHistory(
   return result;
 }
 
+/** In-memory cache for aggregated leaderboard data. */
+let leaderboardCache: {
+  data: LeaderboardResults;
+  expiresAt: number;
+} | null = null;
+
+/** Cache TTL: 5 minutes (data syncs 2x daily so this is very safe). */
+const LEADERBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** Results from fetchAllLeaderboards keyed by metric. */
+export type LeaderboardResults = Record<StatMetric, PlayerStatSummary[]>;
+
 /**
- * Fetch top performers by a given metric across all gameweeks.
+ * Fetch all leaderboards in a single pass. Fetches players and gameweek_stats
+ * once, aggregates once, then sorts by each metric. Results are cached
+ * in-memory for 5 minutes.
  */
-export async function fetchTopPerformers(
+export async function fetchAllLeaderboards(
   request: Request,
-  metric: StatMetric,
   limit: number = 10,
-): Promise<PlayerStatSummary[]> {
+): Promise<LeaderboardResults> {
+  if (leaderboardCache && Date.now() < leaderboardCache.expiresAt) {
+    return leaderboardCache.data;
+  }
+
   const pb = createStatClient(request);
 
-  // Get all players
-  const players = await pb
-    .collection("players")
-    .getFullList<PlayerRecord>({ sort: "name" });
+  const [players, allStats] = await Promise.all([
+    pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
+    pb.collection("gameweek_stats").getFullList<GameweekStat>({ filter: "gw > 0" }),
+  ]);
 
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
-  // Get all per-gameweek stats (gw > 0)
-  const allStats = await pb
-    .collection("gameweek_stats")
-    .getFullList<GameweekStat>({ filter: "gw > 0" });
-
-  // Aggregate per player
+  // Aggregate per player (single pass)
   const summaries = new Map<string, PlayerStatSummary>();
 
   for (const stat of allStats) {
@@ -201,14 +213,41 @@ export async function fetchTopPerformers(
     summary.cbitPer90 = nineties > 0 ? summary.totalCbit / nineties : 0;
   }
 
-  // Sort by the requested metric
-  const sorted = Array.from(summaries.values()).sort((a, b) => {
-    const aVal = getMetricValue(a, metric);
-    const bVal = getMetricValue(b, metric);
-    return bVal - aVal;
-  });
+  const allSummaries = Array.from(summaries.values());
 
-  return sorted.slice(0, limit);
+  // Sort by each metric and take top N
+  const metrics: StatMetric[] = [
+    "xg", "npxg", "xa", "cbit", "overperformance", "sca",
+    "progressive_carries", "ball_recoveries", "fpl_points",
+    "chances_created", "successful_dribbles", "touches_opposition_box",
+    "recoveries", "duels_won", "aerial_duels_won", "big_chances_missed",
+    "goals_prevented", "defensive_contributions",
+  ];
+
+  const results = {} as LeaderboardResults;
+  for (const metric of metrics) {
+    const sorted = [...allSummaries].sort((a, b) =>
+      getMetricValue(b, metric) - getMetricValue(a, metric)
+    );
+    results[metric] = sorted.slice(0, limit);
+  }
+
+  leaderboardCache = { data: results, expiresAt: Date.now() + LEADERBOARD_CACHE_TTL_MS };
+
+  return results;
+}
+
+/**
+ * Fetch top performers by a given metric across all gameweeks.
+ * @deprecated Use fetchAllLeaderboards() for batch fetching all metrics at once.
+ */
+export async function fetchTopPerformers(
+  request: Request,
+  metric: StatMetric,
+  limit: number = 10,
+): Promise<PlayerStatSummary[]> {
+  const all = await fetchAllLeaderboards(request, limit);
+  return all[metric];
 }
 
 /**
