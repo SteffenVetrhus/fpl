@@ -12,6 +12,10 @@ logging.basicConfig(
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+# Suppress noisy HTTP client logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("pocketbase").setLevel(logging.WARNING)
 logger = logging.getLogger("scraper-fplcore")
 
 
