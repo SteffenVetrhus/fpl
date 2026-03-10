@@ -3,19 +3,18 @@
 Scrapes progressive carries, shot-creating actions (SCA), and ball
 recoveries from FBRef's stats tables.
 
-Uses Playwright with Firefox to pass Cloudflare's JavaScript challenge
-on fbref.com. Firefox is used instead of Chromium because Playwright's
-Chromium ships as chrome-headless-shell which cannot execute CF challenges.
+Uses Camoufox (anti-detect Firefox) to pass Cloudflare's JavaScript
+challenge on fbref.com. Regular Playwright browsers get detected and
+blocked by Cloudflare's bot detection.
 """
 
 from __future__ import annotations
 
 import logging
-from contextlib import contextmanager
-from typing import Generator
 
 from bs4 import BeautifulSoup
-from playwright.sync_api import Browser, Page, sync_playwright
+from camoufox.sync_api import Camoufox
+from playwright.sync_api import BrowserContext, Page
 
 from src.delay import human_delay_range
 from src.pb_client import get_all_players, upsert_gameweek_stat
@@ -31,17 +30,6 @@ INITIAL_BACKOFF = 4
 
 # Cloudflare challenge typically resolves within 10s; we wait up to 30s.
 CF_CHALLENGE_TIMEOUT_MS = 30_000
-
-
-@contextmanager
-def _create_browser() -> Generator[Browser, None, None]:
-    """Launch a headless Firefox browser via Playwright."""
-    with sync_playwright() as pw:
-        browser = pw.firefox.launch(headless=True)
-        try:
-            yield browser
-        finally:
-            browser.close()
 
 
 def _wait_for_cloudflare(page: Page) -> None:
@@ -186,12 +174,7 @@ def run() -> int:
 
     player_stats: dict[str, dict] = {}
 
-    with _create_browser() as browser:
-        context = browser.new_context(
-            locale="en-US",
-            timezone_id="Europe/London",
-            viewport={"width": 1920, "height": 1080},
-        )
+    with Camoufox(headless=True, os="linux") as context:
         page = context.new_page()
 
         human_delay_range(3, 6)
@@ -228,8 +211,6 @@ def run() -> int:
                 "cbit": tackles + blocks + interceptions + clearances,
                 "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
             })
-
-        context.close()
 
     for stats in player_stats.values():
         name = stats.get("player_name", "")
