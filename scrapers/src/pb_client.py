@@ -69,8 +69,33 @@ def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -
 
 
 def create_price_snapshot(player_record_id: str, data: dict[str, Any]) -> str:
-    """Create a price history snapshot. Returns the record ID."""
+    """Create a price history snapshot, skipping if one exists today.
+
+    Deduplicates on (player, snapshot_date day) so re-running the sync
+    on the same day won't create duplicate snapshots.
+
+    Returns the record ID.
+    """
     pb = get_client()
+
+    # Deduplicate: check if a snapshot already exists for this player today
+    snapshot_date = data.get("snapshot_date", "")
+    date_prefix = snapshot_date[:10] if snapshot_date else ""
+    if date_prefix:
+        try:
+            existing = pb.collection("price_history").get_first_list_item(
+                f'player = "{player_record_id}" && snapshot_date >= "{date_prefix}" '
+                f'&& snapshot_date < "{date_prefix}T23:59:59Z"'
+            )
+            # Update with latest values instead of creating a duplicate
+            record = pb.collection("price_history").update(existing.id, {
+                "player": player_record_id,
+                **data,
+            })
+            return record.id
+        except ClientResponseError:
+            pass  # No existing snapshot today, create a new one
+
     record = pb.collection("price_history").create({
         "player": player_record_id,
         **data,

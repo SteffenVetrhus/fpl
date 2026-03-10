@@ -10,11 +10,11 @@ from __future__ import annotations
 import json
 import logging
 import re
-import time
 
 import httpx
 from bs4 import BeautifulSoup
 
+from src.delay import human_delay, human_delay_range
 from src.pb_client import get_all_players, upsert_gameweek_stat
 from src.player_matcher import match_player, update_player_external_id
 
@@ -124,7 +124,7 @@ def run() -> int:
             matches = fetch_player_matches(us_id)
         except Exception as exc:
             logger.warning("Failed to fetch matches for %s: %s", us_name, exc)
-            time.sleep(1)
+            human_delay_range(2, 5)
             continue
 
         for m in matches:
@@ -141,8 +141,8 @@ def run() -> int:
             })
             count += 1
 
-        # Polite rate limiting
-        time.sleep(1.5)
+        # Human-like delay between player page fetches
+        human_delay(2.0, 1.0)
 
     logger.info("Understat sync complete: %d records", count)
     return count

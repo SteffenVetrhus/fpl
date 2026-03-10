@@ -9,12 +9,12 @@ FPL data (points, minutes, goals, assists, xG/xA from FPL's own model).
 from __future__ import annotations
 
 import logging
-import time
 from datetime import datetime, timezone
 
 import httpx
 
 from src.config import FPL_API_BASE_URL
+from src.delay import human_delay, human_delay_range
 from src.pb_client import (
     create_price_snapshot,
     upsert_gameweek_stat,
@@ -131,12 +131,12 @@ def sync_element_summaries(batch_size: int = 50) -> int:
             })
             count += 1
 
-        # Polite rate limiting: ~1 request per second
+        # Human-like rate limiting with jitter
         if (i + 1) % batch_size == 0:
             logger.info("Processed %d/%d players...", i + 1, len(active_players))
-            time.sleep(2)
+            human_delay_range(3, 6)
         else:
-            time.sleep(0.5)
+            human_delay(1.0, 0.5)
 
     logger.info("Created/updated %d gameweek stat records", count)
     return count
