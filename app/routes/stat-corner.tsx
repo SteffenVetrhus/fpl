@@ -9,25 +9,33 @@ import type { Route } from "./+types/stat-corner";
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
 
+  const catchFetch = (label: string) => (e: unknown) => {
+    console.error(`[stat-corner] ${label} failed:`, e);
+    return [] as PlayerStatSummary[];
+  };
+
   const [
     clinical, topXg, topXa, topCbit, topSca,
     boxThreat, duelMasters, dribbleKings, ballWinners,
     aerialDominance, gkWall, bigChanceWasters,
     syncStatus,
   ] = await Promise.all([
-    fetchTopPerformers("overperformance", 10).catch(() => []),
-    fetchTopPerformers("xg", 10).catch(() => []),
-    fetchTopPerformers("xa", 10).catch(() => []),
-    fetchTopPerformers("cbit", 10).catch(() => []),
-    fetchTopPerformers("chances_created", 10).catch(() => []),
-    fetchTopPerformers("touches_opposition_box", 10).catch(() => []),
-    fetchTopPerformers("duels_won", 10).catch(() => []),
-    fetchTopPerformers("successful_dribbles", 10).catch(() => []),
-    fetchTopPerformers("recoveries", 10).catch(() => []),
-    fetchTopPerformers("aerial_duels_won", 10).catch(() => []),
-    fetchTopPerformers("goals_prevented", 10).catch(() => []),
-    fetchTopPerformers("big_chances_missed", 10).catch(() => []),
-    fetchSyncStatus().catch(() => []),
+    fetchTopPerformers(request, "overperformance", 10).catch(catchFetch("overperformance")),
+    fetchTopPerformers(request, "xg", 10).catch(catchFetch("xg")),
+    fetchTopPerformers(request, "xa", 10).catch(catchFetch("xa")),
+    fetchTopPerformers(request, "cbit", 10).catch(catchFetch("cbit")),
+    fetchTopPerformers(request, "chances_created", 10).catch(catchFetch("chances_created")),
+    fetchTopPerformers(request, "touches_opposition_box", 10).catch(catchFetch("touches_opposition_box")),
+    fetchTopPerformers(request, "duels_won", 10).catch(catchFetch("duels_won")),
+    fetchTopPerformers(request, "successful_dribbles", 10).catch(catchFetch("successful_dribbles")),
+    fetchTopPerformers(request, "recoveries", 10).catch(catchFetch("recoveries")),
+    fetchTopPerformers(request, "aerial_duels_won", 10).catch(catchFetch("aerial_duels_won")),
+    fetchTopPerformers(request, "goals_prevented", 10).catch(catchFetch("goals_prevented")),
+    fetchTopPerformers(request, "big_chances_missed", 10).catch(catchFetch("big_chances_missed")),
+    fetchSyncStatus(request).catch((e) => {
+      console.error("[stat-corner] fetchSyncStatus failed:", e);
+      return [] as SyncLogEntry[];
+    }),
   ]);
 
   return {
