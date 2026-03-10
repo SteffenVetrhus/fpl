@@ -1,15 +1,15 @@
 """Service 3: FBRef / Opta advanced metrics scraper.
 
 Scrapes progressive carries, shot-creating actions (SCA), and ball
-recoveries from FBRef's stats tables.  Uses ``cloudscraper`` to handle
-Cloudflare protection.
+recoveries from FBRef's stats tables.  Uses ``httpx`` with browser-like
+headers and retry logic to handle FBRef's Cloudflare protection.
 """
 
 from __future__ import annotations
 
 import logging
 
-import cloudscraper
+import httpx
 from bs4 import BeautifulSoup
 
 from src.delay import human_delay_range
@@ -21,17 +21,63 @@ logger = logging.getLogger(__name__)
 FBREF_BASE = "https://fbref.com"
 EPL_SEASON_URL = f"{FBREF_BASE}/en/comps/9/2025-2026/stats/2025-2026-Premier-League-Stats"
 
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;"
+        "q=0.9,image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
+}
 
-def _create_scraper() -> cloudscraper.CloudScraper:
-    """Create a cloudscraper instance with browser-like headers."""
-    return cloudscraper.create_scraper(
-        browser={"browser": "chrome", "platform": "linux", "desktop": True},
+MAX_RETRIES = 4
+INITIAL_BACKOFF = 4  # seconds
+
+
+def _create_client() -> httpx.Client:
+    """Create an httpx client with browser-like headers."""
+    return httpx.Client(
+        headers=_BROWSER_HEADERS,
+        follow_redirects=True,
+        timeout=30.0,
+        http2=True,
     )
 
 
-def _fetch_page(scraper: cloudscraper.CloudScraper, url: str) -> str:
-    """Fetch an HTML page from FBRef via cloudscraper."""
-    resp = scraper.get(url, timeout=30)
+def _fetch_page(client: httpx.Client, url: str) -> str:
+    """Fetch an HTML page from FBRef with retry and exponential backoff."""
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = client.get(url)
+            resp.raise_for_status()
+            return resp.text
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status == 429 or status == 403:
+                low = INITIAL_BACKOFF * (2 ** attempt)
+                high = low + 3
+                logger.warning(
+                    "FBRef returned %d for %s (attempt %d/%d), "
+                    "retrying in %d-%ds...",
+                    status, url, attempt + 1, MAX_RETRIES, low, high,
+                )
+                human_delay_range(low, high)
+            else:
+                raise
+    # Final attempt — let the exception propagate
+    resp = client.get(url)
     resp.raise_for_status()
     return resp.text
 
@@ -95,27 +141,27 @@ def _parse_stat_table(
     return rows
 
 
-def fetch_possession_stats(scraper: cloudscraper.CloudScraper) -> list[dict[str, str]]:
+def fetch_possession_stats(client: httpx.Client) -> list[dict[str, str]]:
     """Fetch possession/carrying stats (progressive carries)."""
     logger.info("Fetching FBRef possession stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/possession/")
-    html = _fetch_page(scraper, url)
+    html = _fetch_page(client, url)
     return _parse_stat_table(html, "stats_possession")
 
 
-def fetch_gca_stats(scraper: cloudscraper.CloudScraper) -> list[dict[str, str]]:
+def fetch_gca_stats(client: httpx.Client) -> list[dict[str, str]]:
     """Fetch goal and shot creation stats (SCA)."""
     logger.info("Fetching FBRef GCA stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/gca/")
-    html = _fetch_page(scraper, url)
+    html = _fetch_page(client, url)
     return _parse_stat_table(html, "stats_gca")
 
 
-def fetch_defense_stats(scraper: cloudscraper.CloudScraper) -> list[dict[str, str]]:
+def fetch_defense_stats(client: httpx.Client) -> list[dict[str, str]]:
     """Fetch defensive stats (tackles, blocks, interceptions, recoveries)."""
     logger.info("Fetching FBRef defensive stats...")
     url = EPL_SEASON_URL.replace("/stats/", "/defense/")
-    html = _fetch_page(scraper, url)
+    html = _fetch_page(client, url)
     return _parse_stat_table(html, "stats_defense")
 
 
@@ -143,7 +189,7 @@ def run() -> int:
     app can use these for per-90 calculations.
     """
     logger.info("Starting FBRef sync...")
-    scraper = _create_scraper()
+    client = _create_client()
     players_pb = get_all_players()
     count = 0
 
@@ -152,7 +198,7 @@ def run() -> int:
 
     # 1. Possession stats → progressive carries
     human_delay_range(3, 6)
-    for row in fetch_possession_stats(scraper):
+    for row in fetch_possession_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         player_stats.setdefault(key, {}).update({
             "player_name": row.get("player", ""),
@@ -163,7 +209,7 @@ def run() -> int:
 
     # 2. GCA stats → shot-creating actions
     human_delay_range(5, 10)
-    for row in fetch_gca_stats(scraper):
+    for row in fetch_gca_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         player_stats.setdefault(key, {}).update({
             "player_name": row.get("player", ""),
@@ -174,7 +220,7 @@ def run() -> int:
 
     # 3. Defense stats → CBIT, ball recoveries
     human_delay_range(5, 10)
-    for row in fetch_defense_stats(scraper):
+    for row in fetch_defense_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
         tackles = _safe_int(row.get("tackles", "0"))
         blocks = _safe_int(row.get("blocks", "0"))
