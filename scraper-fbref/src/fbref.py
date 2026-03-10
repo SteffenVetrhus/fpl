@@ -3,9 +3,10 @@
 Scrapes progressive carries, shot-creating actions (SCA), and ball
 recoveries from FBRef's stats tables.
 
-Uses Camoufox (anti-detect Firefox) to pass Cloudflare's JavaScript
-challenge on fbref.com. Regular Playwright browsers get detected and
-blocked by Cloudflare's bot detection.
+Uses Camoufox (anti-detect Firefox) in virtual display mode to pass
+Cloudflare's JavaScript challenge on fbref.com. Headless mode gets
+detected even with camoufox, so we use Xvfb to run a full headed
+browser without a physical screen.
 """
 
 from __future__ import annotations
@@ -32,8 +33,27 @@ INITIAL_BACKOFF = 4
 CF_CHALLENGE_TIMEOUT_MS = 30_000
 
 
-def _wait_for_cloudflare(page: Page) -> None:
-    """Wait for Cloudflare challenge to resolve, if present."""
+def _solve_cloudflare(page: Page) -> None:
+    """Detect and solve Cloudflare challenge if present."""
+    title = page.title()
+    if "Just a moment" not in title and "Checking" not in title:
+        return
+
+    logger.info("Cloudflare challenge detected, waiting for resolution...")
+
+    # Try clicking the Turnstile checkbox if it appears.
+    try:
+        turnstile = page.frame_locator(
+            "iframe[src*='challenges.cloudflare.com']"
+        )
+        checkbox = turnstile.locator("input[type='checkbox'], .cb-lb")
+        if checkbox.count() > 0:
+            logger.info("Clicking Turnstile checkbox...")
+            checkbox.first.click()
+    except Exception:
+        logger.debug("No Turnstile checkbox found, waiting for auto-resolve")
+
+    # Wait for the challenge page to go away.
     try:
         page.wait_for_function(
             """() => {
@@ -44,10 +64,10 @@ def _wait_for_cloudflare(page: Page) -> None:
             }""",
             timeout=CF_CHALLENGE_TIMEOUT_MS,
         )
+        logger.info("Cloudflare challenge resolved.")
     except Exception:
         logger.warning(
-            "Cloudflare challenge did not resolve within %ds, "
-            "proceeding anyway...",
+            "Cloudflare challenge did not resolve within %ds.",
             CF_CHALLENGE_TIMEOUT_MS // 1000,
         )
 
@@ -58,7 +78,7 @@ def _fetch_page(page: Page, url: str) -> str:
     for attempt in range(MAX_RETRIES + 1):
         try:
             resp = page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-            _wait_for_cloudflare(page)
+            _solve_cloudflare(page)
 
             status = resp.status if resp else 0
             if status == 403 or status == 429:
@@ -174,7 +194,12 @@ def run() -> int:
 
     player_stats: dict[str, dict] = {}
 
-    with Camoufox(headless=True, os="linux") as context:
+    with Camoufox(
+        headless=False,
+        virtual_display=True,
+        disable_coop=True,
+        os="linux",
+    ) as context:
         page = context.new_page()
 
         human_delay_range(3, 6)
