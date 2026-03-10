@@ -8,7 +8,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
+COPY data/ data/
 
-# Mount your saved HTML files to /app/data:
-#   docker run -v ./data:/app/data scraper-fbref
 CMD ["python", "-m", "src.main"]
