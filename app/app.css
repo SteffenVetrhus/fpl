@@ -351,6 +351,58 @@ html, body {
   background: rgba(0, 0, 0, 0.9);
 }
 
+/* Deadline timer */
+.kit-deadline-timer {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.kit-deadline-label {
+  opacity: 0.6;
+}
+
+.kit-deadline-countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.kit-deadline-urgent {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(127, 29, 29, 0.8);
+}
+
+.kit-deadline-urgent .kit-deadline-countdown {
+  color: #fca5a5;
+}
+
+@media (max-width: 640px) {
+  .kit-deadline-timer {
+    top: auto;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6875rem;
+  }
+}
+
 /* Badge for awards */
 .kit-badge {
   display: inline-flex;

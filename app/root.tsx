@@ -13,6 +13,8 @@ import {
 import { LogOut, User } from "lucide-react";
 import { getOptionalAuth, type AuthUser } from "~/lib/pocketbase/auth";
 import { getEnvConfig } from "~/config/env";
+import { fetchBootstrapStatic } from "~/lib/fpl-api/client";
+import { DeadlineTimer } from "~/components/DeadlineTimer";
 
 import {
   Trophy,
@@ -59,9 +61,19 @@ export function useAuth(): AuthContext {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const config = getEnvConfig();
-  const user = await getOptionalAuth(request);
+  const [user, bootstrap] = await Promise.all([
+    getOptionalAuth(request),
+    fetchBootstrapStatic().catch(() => null),
+  ]);
+
+  const nextEvent = bootstrap?.events.find((e) => e.is_next);
+  const deadline = nextEvent
+    ? { deadlineTime: nextEvent.deadline_time, gameweekName: nextEvent.name }
+    : null;
+
   return {
     user,
+    deadline,
     ENV: {
       POCKETBASE_URL: config.pocketbasePublicUrl,
     },
@@ -324,8 +336,13 @@ function HamburgerMenu() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const data = useRouteLoaderData("root") as { user: AuthUser | null; ENV: { POCKETBASE_URL: string } } | undefined;
+  const data = useRouteLoaderData("root") as {
+    user: AuthUser | null;
+    deadline: { deadlineTime: string; gameweekName: string } | null;
+    ENV: { POCKETBASE_URL: string };
+  } | undefined;
   const user = data?.user ?? null;
+  const deadline = data?.deadline ?? null;
   const env = data?.ENV;
 
   return (
@@ -339,6 +356,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <AuthCtx.Provider value={{ user }}>
           <HamburgerMenu />
+          {deadline && (
+            <DeadlineTimer
+              deadlineTime={deadline.deadlineTime}
+              gameweekName={deadline.gameweekName}
+            />
+          )}
           {children}
         </AuthCtx.Provider>
         {env && (
