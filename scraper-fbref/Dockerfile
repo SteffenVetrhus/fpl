@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 
 COPY src/ src/
 
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp &  sleep 1 && python -m src.main"]
+CMD ["python", "-m", "src.main"]

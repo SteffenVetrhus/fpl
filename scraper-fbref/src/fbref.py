@@ -12,6 +12,8 @@ browser without a physical screen.
 from __future__ import annotations
 
 import logging
+import subprocess
+import time
 
 from bs4 import BeautifulSoup
 from camoufox.sync_api import Camoufox
@@ -31,6 +33,29 @@ INITIAL_BACKOFF = 4
 
 # Cloudflare challenge typically resolves within 10s; we wait up to 30s.
 CF_CHALLENGE_TIMEOUT_MS = 30_000
+
+_xvfb_proc: subprocess.Popen | None = None
+
+
+def _ensure_xvfb() -> None:
+    """Start Xvfb on :99 if not already running."""
+    global _xvfb_proc
+    if _xvfb_proc is not None:
+        return
+
+    logger.info("Starting Xvfb on :99...")
+    _xvfb_proc = subprocess.Popen(
+        ["Xvfb", ":99", "-screen", "0", "1920x1080x24", "-nolisten", "tcp"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    # Give Xvfb time to start.
+    time.sleep(1)
+    if _xvfb_proc.poll() is not None:
+        raise RuntimeError(
+            f"Xvfb failed to start (exit code {_xvfb_proc.returncode})"
+        )
+    logger.info("Xvfb started (pid=%d).", _xvfb_proc.pid)
 
 
 def _solve_cloudflare(page: Page) -> None:
@@ -193,6 +218,8 @@ def run() -> int:
     count = 0
 
     player_stats: dict[str, dict] = {}
+
+    _ensure_xvfb()
 
     with Camoufox(
         headless=False,
