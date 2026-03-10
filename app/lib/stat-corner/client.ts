@@ -110,6 +110,8 @@ export async function fetchTopPerformers(
     .collection("players")
     .getFullList<PlayerRecord>({ sort: "name" });
 
+  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${players.length} players found`);
+
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
   // Get all gameweek stats (gw > 0 — exclude season aggregates)
@@ -117,10 +119,14 @@ export async function fetchTopPerformers(
     .collection("gameweek_stats")
     .getFullList<GameweekStat>({ filter: "gw > 0" });
 
+  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${allStats.length} gameweek stats (gw > 0)`);
+
   // Also get season aggregates (gw = 0) for FBRef data
   const seasonAggregates = await pb
     .collection("gameweek_stats")
     .getFullList<GameweekStat>({ filter: "gw = 0" });
+
+  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${seasonAggregates.length} season aggregates (gw = 0)`);
 
   const seasonMap = new Map(seasonAggregates.map((s) => [s.player, s]));
 
@@ -185,6 +191,8 @@ export async function fetchTopPerformers(
     summary.xaPer90 = nineties > 0 ? summary.totalXa / nineties : 0;
     summary.cbitPer90 = nineties > 0 ? summary.totalCbit / nineties : 0;
   }
+
+  console.log(`[stat-corner] fetchTopPerformers(${metric}): ${summaries.size} player summaries after aggregation`);
 
   // Sort by the requested metric
   const sorted = Array.from(summaries.values()).sort((a, b) => {
