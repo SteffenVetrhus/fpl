@@ -25,22 +25,6 @@ def get_client() -> PocketBase:
     return _client
 
 
-def upsert_player(data: dict[str, Any]) -> str:
-    """Create or update a player record. Returns the record ID."""
-    pb = get_client()
-    fpl_id = data["fpl_id"]
-
-    try:
-        existing = pb.collection("players").get_first_list_item(
-            f'fpl_id = {fpl_id}'
-        )
-        record = pb.collection("players").update(existing.id, data)
-        return record.id
-    except ClientResponseError:
-        record = pb.collection("players").create(data)
-        return record.id
-
-
 def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -> str:
     """Create or update a gameweek stat record. Returns the record ID."""
     pb = get_client()
@@ -64,41 +48,6 @@ def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -
         return record.id
 
 
-def create_price_snapshot(player_record_id: str, data: dict[str, Any]) -> str:
-    """Create a price history snapshot, skipping if one exists today.
-
-    Deduplicates on (player, snapshot_date day) so re-running the sync
-    on the same day won't create duplicate snapshots.
-
-    Returns the record ID.
-    """
-    pb = get_client()
-
-    # Deduplicate: check if a snapshot already exists for this player today
-    snapshot_date = data.get("snapshot_date", "")
-    date_prefix = snapshot_date[:10] if snapshot_date else ""
-    if date_prefix:
-        try:
-            existing = pb.collection("price_history").get_first_list_item(
-                f'player = "{player_record_id}" && snapshot_date >= "{date_prefix}" '
-                f'&& snapshot_date < "{date_prefix}T23:59:59Z"'
-            )
-            # Update with latest values instead of creating a duplicate
-            record = pb.collection("price_history").update(existing.id, {
-                "player": player_record_id,
-                **data,
-            })
-            return record.id
-        except ClientResponseError:
-            pass  # No existing snapshot today, create a new one
-
-    record = pb.collection("price_history").create({
-        "player": player_record_id,
-        **data,
-    })
-    return record.id
-
-
 def log_sync(
     service: str,
     status: str,
@@ -115,17 +64,6 @@ def log_sync(
         "duration_seconds": round(duration_seconds, 2),
         "error_message": error_message,
     })
-
-
-def get_player_by_fpl_id(fpl_id: int) -> Any | None:
-    """Look up a player record by FPL element ID."""
-    pb = get_client()
-    try:
-        return pb.collection("players").get_first_list_item(
-            f'fpl_id = {fpl_id}'
-        )
-    except ClientResponseError:
-        return None
 
 
 def get_all_players() -> list[Any]:

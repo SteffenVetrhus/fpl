@@ -34,50 +34,5 @@ services:
       timeout: 5s
       retries: 5
 
-  scraper-fpl:
-    build:
-      context: ./scrapers
-    command: ["python", "-m", "src.run_fpl"]
-    environment:
-      - PB_URL=http://pocketbase:8090
-      - PB_USER=${PB_ADMIN_EMAIL}
-      - PB_PASS=${PB_ADMIN_PASSWORD}
-      - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
-    depends_on:
-      pocketbase:
-        condition: service_healthy
-    profiles:
-      - scraper
-
-  scraper-understat:
-    build:
-      context: ./scrapers
-    command: ["python", "-m", "src.run_understat"]
-    environment:
-      - PB_URL=http://pocketbase:8090
-      - PB_USER=${PB_ADMIN_EMAIL}
-      - PB_PASS=${PB_ADMIN_PASSWORD}
-      - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
-    depends_on:
-      pocketbase:
-        condition: service_healthy
-    profiles:
-      - scraper
-
-  scraper-fbref:
-    build:
-      context: ./scrapers
-    command: ["python", "-m", "src.run_fbref"]
-    environment:
-      - PB_URL=http://pocketbase:8090
-      - PB_USER=${PB_ADMIN_EMAIL}
-      - PB_PASS=${PB_ADMIN_PASSWORD}
-      - FPL_API_BASE_URL=${FPL_API_BASE_URL:-https://fantasy.premierleague.com/api}
-    depends_on:
-      pocketbase:
-        condition: service_healthy
-    profiles:
-      - scraper
-
 volumes:
   pb_data:

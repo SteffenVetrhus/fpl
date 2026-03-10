@@ -1,4 +1,4 @@
-"""Standalone entrypoint for the FBRef scraper service."""
+"""Entrypoint for the FBRef scraper."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def main() -> None:
     start = time.time()
 
     try:
-        from src.services.fbref import run
+        from src.fbref import run
         count = run()
         duration = time.time() - start
         log_sync("fbref", "success", count, duration)

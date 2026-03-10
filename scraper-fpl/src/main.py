@@ -1,4 +1,4 @@
-"""Standalone entrypoint for the FPL sync service."""
+"""Entrypoint for the FPL sync scraper."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def main() -> None:
     start = time.time()
 
     try:
-        from src.services.fpl_sync import run
+        from src.fpl_sync import run
         count = run()
         duration = time.time() - start
         log_sync("fpl_sync", "success", count, duration)

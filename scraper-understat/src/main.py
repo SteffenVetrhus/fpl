@@ -1,4 +1,4 @@
-"""Standalone entrypoint for the Understat scraper service."""
+"""Entrypoint for the Understat scraper."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def main() -> None:
     start = time.time()
 
     try:
-        from src.services.understat import run
+        from src.understat import run
         count = run()
         duration = time.time() - start
         log_sync("understat", "success", count, duration)

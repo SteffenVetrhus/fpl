@@ -1,8 +1,7 @@
-"""Service 3: FBRef / Opta advanced metrics scraper.
+"""FBRef / Opta advanced metrics scraper.
 
 Scrapes progressive carries, shot-creating actions (SCA), and ball
-recoveries from FBRef's stats tables.  Uses ``httpx`` with browser-like
-headers and retry logic to handle FBRef's Cloudflare protection.
+recoveries from FBRef's stats tables.
 """
 
 from __future__ import annotations
@@ -43,7 +42,7 @@ _BROWSER_HEADERS = {
 }
 
 MAX_RETRIES = 4
-INITIAL_BACKOFF = 4  # seconds
+INITIAL_BACKOFF = 4
 
 
 def _create_client() -> httpx.Client:
@@ -76,7 +75,6 @@ def _fetch_page(client: httpx.Client, url: str) -> str:
                 human_delay_range(low, high)
             else:
                 raise
-    # Final attempt — let the exception propagate
     resp = client.get(url)
     resp.raise_for_status()
     return resp.text
@@ -85,22 +83,15 @@ def _fetch_page(client: httpx.Client, url: str) -> str:
 def _parse_stat_table(
     html: str, table_id: str,
 ) -> list[dict[str, str]]:
-    """Parse an FBRef stats table into a list of row dicts.
-
-    FBRef wraps tables in comments (<!-- ... -->) for lazy loading.
-    We need to handle both regular and commented-out tables.
-    """
+    """Parse an FBRef stats table into a list of row dicts."""
     soup = BeautifulSoup(html, "html.parser")
 
-    # Try direct table first
     table = soup.find("table", id=table_id)
 
-    # If not found, check inside HTML comments
     if table is None:
         import re
         for comment in soup.find_all(string=lambda t: isinstance(t, type(soup.new_string(""))) is False):
             pass
-        # FBRef hides tables in comments
         comments = soup.find_all(
             string=lambda text: text and table_id in str(text)
         )
@@ -129,7 +120,6 @@ def _parse_stat_table(
             if stat:
                 row[stat] = td.get_text(strip=True)
         if row.get("player"):
-            # Extract player link for fbref_id
             link = tr.find("a", href=True)
             if link and "/players/" in link["href"]:
                 parts = link["href"].split("/")
@@ -166,7 +156,6 @@ def fetch_defense_stats(client: httpx.Client) -> list[dict[str, str]]:
 
 
 def _safe_int(value: str, default: int = 0) -> int:
-    """Parse an int from a string, returning default on failure."""
     try:
         return int(value)
     except (ValueError, TypeError):
@@ -174,7 +163,6 @@ def _safe_int(value: str, default: int = 0) -> int:
 
 
 def _safe_float(value: str, default: float = 0.0) -> float:
-    """Parse a float from a string, returning default on failure."""
     try:
         return float(value)
     except (ValueError, TypeError):
@@ -182,21 +170,14 @@ def _safe_float(value: str, default: float = 0.0) -> float:
 
 
 def run() -> int:
-    """Run the FBRef sync pipeline. Returns records processed.
-
-    FBRef data is season-level aggregates (not per-gameweek), so we store
-    the season totals as a special ``gw=0`` record for each player. The React
-    app can use these for per-90 calculations.
-    """
+    """Run the FBRef sync pipeline. Returns records processed."""
     logger.info("Starting FBRef sync...")
     client = _create_client()
     players_pb = get_all_players()
     count = 0
 
-    # Merge data from three tables by player name + team
     player_stats: dict[str, dict] = {}
 
-    # 1. Possession stats → progressive carries
     human_delay_range(3, 6)
     for row in fetch_possession_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
@@ -207,7 +188,6 @@ def run() -> int:
             "progressive_carries": _safe_int(row.get("progressive_carries", "0")),
         })
 
-    # 2. GCA stats → shot-creating actions
     human_delay_range(5, 10)
     for row in fetch_gca_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
@@ -218,7 +198,6 @@ def run() -> int:
             "sca": _safe_int(row.get("sca", "0")),
         })
 
-    # 3. Defense stats → CBIT, ball recoveries
     human_delay_range(5, 10)
     for row in fetch_defense_stats(client):
         key = f"{row.get('player', '')}|{row.get('team', '')}"
@@ -234,14 +213,12 @@ def run() -> int:
             "ball_recoveries": _safe_int(row.get("ball_recoveries", "0")),
         })
 
-    # 4. Match to PocketBase players and upsert
     for stats in player_stats.values():
         name = stats.get("player_name", "")
         team = stats.get("team", "")
         if not name:
             continue
 
-        # Try fbref_id direct lookup first
         matched = None
         fbref_id = stats.get("fbref_id", "")
         if fbref_id:
@@ -260,7 +237,6 @@ def run() -> int:
         if fbref_id:
             update_player_external_id(matched, "fbref", fbref_id)
 
-        # Store as gw=0 (season aggregate)
         stat_data = {}
         if "progressive_carries" in stats:
             stat_data["progressive_carries"] = stats["progressive_carries"]

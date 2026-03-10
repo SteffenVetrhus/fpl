@@ -1,4 +1,4 @@
-"""Player ID matching across FPL, Understat, and FBRef.
+"""Player ID matching across FPL and Understat.
 
 Uses exact name matching first, then fuzzy matching constrained by team.
 Stores resolved IDs in the PocketBase ``players`` collection for future
@@ -16,8 +16,6 @@ from src.pb_client import get_all_players, get_client
 
 logger = logging.getLogger(__name__)
 
-# Manual overrides for players whose names differ significantly across sources.
-# Keys are (source, external_name), values are the FPL web_name.
 MANUAL_OVERRIDES: dict[tuple[str, str], str] = {
     ("understat", "Son Heung-Min"): "Son",
     ("understat", "Emile Smith Rowe"): "Smith Rowe",
@@ -25,11 +23,8 @@ MANUAL_OVERRIDES: dict[tuple[str, str], str] = {
     ("understat", "Gabriel Fernando de Jesus"): "G.Jesus",
     ("understat", "Bruno Miguel Borges Fernandes"): "Bruno Fernandes",
     ("understat", "Mohamed Salah"): "M.Salah",
-    ("fbref", "Heung-Min Son"): "Son",
-    ("fbref", "Bruno Fernandes"): "Bruno Fernandes",
 }
 
-# FPL team short names → Understat/FBRef team names
 TEAM_ALIASES: dict[str, list[str]] = {
     "ARS": ["Arsenal"],
     "AVL": ["Aston Villa"],
@@ -53,7 +48,6 @@ TEAM_ALIASES: dict[str, list[str]] = {
     "WOL": ["Wolverhampton Wanderers", "Wolves"],
 }
 
-# Reverse lookup: external team name → FPL short name
 _TEAM_REVERSE: dict[str, str] = {}
 for short, aliases in TEAM_ALIASES.items():
     for alias in aliases:
@@ -71,18 +65,7 @@ def match_player(
     external_team: str,
     players: list[Any] | None = None,
 ) -> Any | None:
-    """Match an external player name to a PocketBase player record.
-
-    Args:
-        source: "understat" or "fbref"
-        external_name: Player name from the external source
-        external_team: Team name from the external source
-        players: Optional pre-fetched list of player records
-
-    Returns:
-        The matching PocketBase player record, or None.
-    """
-    # Check manual overrides first
+    """Match an external player name to a PocketBase player record."""
     override = MANUAL_OVERRIDES.get((source, external_name))
 
     if players is None:
@@ -91,18 +74,15 @@ def match_player(
     fpl_team = normalize_team(external_team)
     search_name = override or external_name
 
-    # Pass 1: exact match on web_name + team
     for p in players:
         if p.name == search_name and p.team == fpl_team:
             return p
 
-    # Pass 2: exact match on full_name + team
     for p in players:
         full_name = getattr(p, "full_name", "") or ""
         if full_name.lower() == external_name.lower() and p.team == fpl_team:
             return p
 
-    # Pass 3: fuzzy match on full_name + team, threshold 85%
     best_score = 0
     best_match = None
     for p in players:

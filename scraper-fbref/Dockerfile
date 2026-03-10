@@ -9,5 +9,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 
-# Default: run the full pipeline (overridden per-service in docker-compose)
 CMD ["python", "-m", "src.main"]
