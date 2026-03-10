@@ -196,7 +196,7 @@ def run() -> int:
 
     with Camoufox(
         headless=False,
-        virtual_display=True,
+        virtual_display=":99",
         disable_coop=True,
         os="linux",
     ) as context:
