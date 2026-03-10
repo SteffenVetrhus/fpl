@@ -8,8 +8,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
-COPY crontab /etc/crontabs/root
 
-RUN touch /var/log/scraper.log
-
-CMD ["crond", "-f", "-l", "2"]
+# Default: run the full pipeline (overridden per-service in docker-compose)
+CMD ["python", "-m", "src.main"]
