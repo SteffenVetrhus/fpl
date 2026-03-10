@@ -4,6 +4,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useFetcher } from "react-router";
 import {
   ClipboardList,
   ChevronLeft,
@@ -18,6 +19,9 @@ import {
   AlertTriangle,
   Check,
   Zap,
+  Save,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 import {
   fetchBootstrapStatic,
@@ -48,6 +52,7 @@ import type {
 } from "~/lib/fpl-api/types";
 import type { Route } from "./+types/transfer-planner";
 import { requireAuth } from "~/lib/pocketbase/auth";
+import { createServerClient } from "~/lib/pocketbase/client";
 
 // ============================================================================
 // Types
@@ -85,6 +90,7 @@ interface LoaderData {
   events: { id: number; name: string; deadlineTime: string }[];
   managerName: string | null;
   teamName: string | null;
+  savedPlan: TransferPlanData | null;
   error: string | null;
 }
 
@@ -96,6 +102,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
   const user = await requireAuth(request);
   const config = getEnvConfig();
   const managerId = user.fplManagerId.toString();
+  const pb = createServerClient(request);
 
   try {
     const [bootstrap, allFixtures, entry, managerHistory] = await Promise.all([
@@ -212,6 +219,19 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       teamName = entry.name;
     }
 
+    // Load saved plan from PocketBase
+    let savedPlan: TransferPlanData | null = null;
+    try {
+      const record = await pb
+        .collection("transfer_plans")
+        .getFirstListItem(`user = "${user.id}"`);
+      if (record?.plan_data) {
+        savedPlan = record.plan_data as TransferPlanData;
+      }
+    } catch {
+      // No saved plan found — that's fine
+    }
+
     return {
       initialSquad,
       allPlayers,
@@ -222,6 +242,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       events,
       managerName,
       teamName,
+      savedPlan,
       error: null,
     };
   } catch (err) {
@@ -235,10 +256,76 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
       events: [],
       managerName: null,
       teamName: null,
+      savedPlan: null,
       error:
         err instanceof Error ? err.message : "Failed to load planner data",
     };
   }
+}
+
+// ============================================================================
+// Action (save/delete plan)
+// ============================================================================
+
+export async function action({ request }: Route.ActionArgs) {
+  const user = await requireAuth(request);
+  const pb = createServerClient(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "save") {
+    const planJson = formData.get("plan") as string;
+    const currentGameweek = Number(formData.get("currentGameweek"));
+
+    if (!planJson) {
+      return { ok: false, error: "No plan data provided" };
+    }
+
+    let planData: TransferPlanData;
+    try {
+      planData = JSON.parse(planJson);
+    } catch {
+      return { ok: false, error: "Invalid plan data" };
+    }
+
+    try {
+      // Try to find existing record
+      const existing = await pb
+        .collection("transfer_plans")
+        .getFirstListItem(`user = "${user.id}"`);
+
+      // Update existing
+      await pb.collection("transfer_plans").update(existing.id, {
+        plan_data: planData,
+        current_gameweek: currentGameweek,
+      });
+
+      return { ok: true, savedAt: new Date().toISOString() };
+    } catch {
+      // No existing record, create new
+      await pb.collection("transfer_plans").create({
+        user: user.id,
+        plan_data: planData,
+        current_gameweek: currentGameweek,
+      });
+
+      return { ok: true, savedAt: new Date().toISOString() };
+    }
+  }
+
+  if (intent === "delete") {
+    try {
+      const existing = await pb
+        .collection("transfer_plans")
+        .getFirstListItem(`user = "${user.id}"`);
+      await pb.collection("transfer_plans").delete(existing.id);
+    } catch {
+      // Nothing to delete
+    }
+    return { ok: true };
+  }
+
+  return { ok: false, error: "Unknown intent" };
 }
 
 // ============================================================================
@@ -652,15 +739,55 @@ export default function TransferPlannerPage({
     events,
     managerName,
     teamName,
+    savedPlan,
     error,
   } = loaderData;
 
-  // Plan state
-  const [plan, setPlan] = useState<TransferPlanData>({ gameweeks: {} });
+  // Plan state — initialise from saved plan if available
+  const [plan, setPlan] = useState<TransferPlanData>(
+    () => savedPlan ?? { gameweeks: {} }
+  );
   const [activeGWIndex, setActiveGWIndex] = useState(0);
   const [swappingPlayerId, setSwappingPlayerId] = useState<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+
+  // Auto-save via fetcher
+  const saveFetcher = useFetcher();
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedPlanRef = useRef<string>(JSON.stringify(savedPlan ?? { gameweeks: {} }));
+  const isSaving = saveFetcher.state !== "idle";
+  const saveResult = saveFetcher.data as { ok?: boolean; savedAt?: string; error?: string } | undefined;
+
+  // Debounced auto-save when plan changes
+  useEffect(() => {
+    const planJson = JSON.stringify(plan);
+
+    // Skip if plan hasn't changed from last save
+    if (planJson === lastSavedPlanRef.current) return;
+
+    // Skip empty plans
+    const hasContent = Object.keys(plan.gameweeks).length > 0;
+    if (!hasContent) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = setTimeout(() => {
+      lastSavedPlanRef.current = planJson;
+      saveFetcher.submit(
+        {
+          intent: "save",
+          plan: planJson,
+          currentGameweek: currentGW.toString(),
+        },
+        { method: "post" }
+      );
+    }, 1500);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [plan, currentGW]);
 
   const activeGW = upcomingGWs[activeGWIndex] ?? currentGW + 1;
 
@@ -975,7 +1102,12 @@ export default function TransferPlannerPage({
 
   const handleReset = useCallback(() => {
     setPlan({ gameweeks: {} });
-  }, []);
+    lastSavedPlanRef.current = JSON.stringify({ gameweeks: {} });
+    saveFetcher.submit(
+      { intent: "delete" },
+      { method: "post" }
+    );
+  }, [saveFetcher]);
 
   // ===========================================================================
   // Render
@@ -1443,7 +1575,7 @@ export default function TransferPlannerPage({
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons + Save Status */}
             <div
               className="flex items-center justify-between gap-3 kit-animate-slide-up"
               style={{ "--delay": "700ms" } as React.CSSProperties}
@@ -1455,6 +1587,29 @@ export default function TransferPlannerPage({
                 <RotateCcw size={14} />
                 Reset Plan
               </button>
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                {isSaving ? (
+                  <>
+                    <Cloud size={14} className="animate-pulse" />
+                    <span>Saving…</span>
+                  </>
+                ) : saveResult?.ok ? (
+                  <>
+                    <Cloud size={14} className="text-green-400" />
+                    <span className="text-green-400">Saved</span>
+                  </>
+                ) : saveResult?.error ? (
+                  <>
+                    <CloudOff size={14} className="text-red-400" />
+                    <span className="text-red-400">Save failed</span>
+                  </>
+                ) : savedPlan ? (
+                  <>
+                    <Cloud size={14} />
+                    <span>Plan loaded</span>
+                  </>
+                ) : null}
+              </div>
             </div>
           </>
         )}
