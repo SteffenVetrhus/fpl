@@ -3,8 +3,9 @@
 Scrapes progressive carries, shot-creating actions (SCA), and ball
 recoveries from FBRef's stats tables.
 
-Uses Playwright to run a real Chromium browser, which is required to
-pass Cloudflare's JavaScript challenge on fbref.com.
+Uses Playwright with Firefox to pass Cloudflare's JavaScript challenge
+on fbref.com. Firefox is used instead of Chromium because Playwright's
+Chromium ships as chrome-headless-shell which cannot execute CF challenges.
 """
 
 from __future__ import annotations
@@ -34,9 +35,9 @@ CF_CHALLENGE_TIMEOUT_MS = 30_000
 
 @contextmanager
 def _create_browser() -> Generator[Browser, None, None]:
-    """Launch a headless Chromium browser via Playwright."""
+    """Launch a headless Firefox browser via Playwright."""
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = pw.firefox.launch(headless=True)
         try:
             yield browser
         finally:
