@@ -16,19 +16,25 @@ import type {
   SyncLogEntry,
 } from "./types";
 
-function createStatClient(): PocketBase {
+const PB_AUTH_COOKIE = "pb_auth";
+
+function createStatClient(request: Request): PocketBase {
   const config = getEnvConfig();
-  return new PocketBase(config.pocketbaseUrl);
+  const pb = new PocketBase(config.pocketbaseUrl);
+  const cookieHeader = request.headers.get("cookie") || "";
+  pb.authStore.loadFromCookie(cookieHeader, PB_AUTH_COOKIE);
+  return pb;
 }
 
 /**
  * Fetch advanced stats for a single player, optionally filtered by gameweek.
  */
 export async function fetchPlayerStats(
+  request: Request,
   fplId: number,
   gw?: number,
 ): Promise<GameweekStat[]> {
-  const pb = createStatClient();
+  const pb = createStatClient(request);
 
   // First, get the player record ID from fpl_id
   const player = await pb
@@ -54,9 +60,10 @@ export async function fetchPlayerStats(
  * Fetch all player stats for a given gameweek.
  */
 export async function fetchAllPlayerStats(
+  request: Request,
   gw: number,
 ): Promise<(GameweekStat & { expand?: { player: PlayerRecord } })[]> {
-  const pb = createStatClient();
+  const pb = createStatClient(request);
   const result = await pb
     .collection("gameweek_stats")
     .getFullList<GameweekStat & { expand?: { player: PlayerRecord } }>({
@@ -71,10 +78,11 @@ export async function fetchAllPlayerStats(
  * Fetch price history for a player over the last N days.
  */
 export async function fetchPriceHistory(
+  request: Request,
   fplId: number,
   days: number = 30,
 ): Promise<PriceSnapshot[]> {
-  const pb = createStatClient();
+  const pb = createStatClient(request);
 
   const player = await pb
     .collection("players")
@@ -100,10 +108,11 @@ export async function fetchPriceHistory(
  * Fetch top performers by a given metric across all gameweeks.
  */
 export async function fetchTopPerformers(
+  request: Request,
   metric: StatMetric,
   limit: number = 10,
 ): Promise<PlayerStatSummary[]> {
-  const pb = createStatClient();
+  const pb = createStatClient(request);
 
   // Get all players
   const players = await pb
@@ -207,8 +216,8 @@ export async function fetchTopPerformers(
 /**
  * Fetch the latest sync log entries.
  */
-export async function fetchSyncStatus(): Promise<SyncLogEntry[]> {
-  const pb = createStatClient();
+export async function fetchSyncStatus(request: Request): Promise<SyncLogEntry[]> {
+  const pb = createStatClient(request);
   const result = await pb
     .collection("sync_log")
     .getList<SyncLogEntry>(1, 10, { sort: "-created" });
@@ -218,8 +227,8 @@ export async function fetchSyncStatus(): Promise<SyncLogEntry[]> {
 /**
  * Fetch all player records.
  */
-export async function fetchAllPlayers(): Promise<PlayerRecord[]> {
-  const pb = createStatClient();
+export async function fetchAllPlayers(request: Request): Promise<PlayerRecord[]> {
+  const pb = createStatClient(request);
   return pb.collection("players").getFullList<PlayerRecord>({ sort: "name" });
 }
 
