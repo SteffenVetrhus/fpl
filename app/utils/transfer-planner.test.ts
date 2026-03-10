@@ -303,6 +303,76 @@ describe("applyPlanToSquad", () => {
     expect(result.players.find((p) => p.element === 100)?.isViceCaptain).toBe(true);
   });
 
+  it("calculates next GW free transfers after using transfers", () => {
+    const squad: PlannerSquad = {
+      players: [
+        makeSquadPlayer({ element: 100, cost: 8.0, elementType: 3 }),
+        makeSquadPlayer({ element: 101, cost: 7.0, elementType: 3, position: 2 }),
+        makeSquadPlayer({ element: 102, cost: 6.0, elementType: 3, position: 3 }),
+      ],
+      bank: 5.0,
+      freeTransfers: 2,
+      totalValue: 26.0,
+    };
+
+    const plan: GameweekPlan = {
+      transfers: [
+        { elementIn: 200, elementOut: 100 },
+        { elementIn: 201, elementOut: 101 },
+        { elementIn: 202, elementOut: 102 },
+      ],
+      captain: null,
+      viceCaptain: null,
+      chip: null,
+      benchOrder: [],
+    };
+
+    const elements = [
+      makeElement({ id: 200, now_cost: 80 }),
+      makeElement({ id: 201, now_cost: 70 }),
+      makeElement({ id: 202, now_cost: 60 }),
+    ];
+
+    const result = applyPlanToSquad(squad, plan, elements);
+    // 3 transfers with 2 FT: 1 hit. Next GW FT = max(1, min(5, 2-3+1)) = 1
+    expect(result.freeTransfers).toBe(1);
+  });
+
+  it("applies chained transfers sequentially within same GW", () => {
+    const squad: PlannerSquad = {
+      players: [
+        makeSquadPlayer({ element: 100, cost: 8.0, elementType: 3 }),
+      ],
+      bank: 2.0,
+      freeTransfers: 2,
+      totalValue: 10.0,
+    };
+
+    // Chained: 100→200, then 200→300 (user changed their mind)
+    const plan: GameweekPlan = {
+      transfers: [
+        { elementIn: 200, elementOut: 100 },
+        { elementIn: 300, elementOut: 200 },
+      ],
+      captain: null,
+      viceCaptain: null,
+      chip: null,
+      benchOrder: [],
+    };
+
+    const elements = [
+      makeElement({ id: 200, web_name: "Middle", now_cost: 70 }),
+      makeElement({ id: 300, web_name: "Final", now_cost: 60 }),
+    ];
+
+    const result = applyPlanToSquad(squad, plan, elements);
+    // Final player should be 300
+    expect(result.players[0].element).toBe(300);
+    expect(result.players[0].webName).toBe("Final");
+    // Bank: 2.0 + 8.0 - 7.0 + 7.0 - 6.0 = 4.0
+    expect(result.bank).toBe(4.0);
+  });
+
   it("resets free transfers to 1 after wildcard", () => {
     const squad: PlannerSquad = {
       players: [makeSquadPlayer({ element: 100, cost: 8.0 })],
