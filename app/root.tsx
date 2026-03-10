@@ -66,6 +66,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       POCKETBASE_URL: config.pocketbasePublicUrl,
     },
     plausibleDomain: config.plausibleDomain,
+    plausibleScriptUrl: config.plausibleScriptUrl,
   };
 }
 
@@ -325,10 +326,11 @@ function HamburgerMenu() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const data = useRouteLoaderData("root") as { user: AuthUser | null; ENV: { POCKETBASE_URL: string }; plausibleDomain?: string } | undefined;
+  const data = useRouteLoaderData("root") as { user: AuthUser | null; ENV: { POCKETBASE_URL: string }; plausibleDomain?: string; plausibleScriptUrl?: string } | undefined;
   const user = data?.user ?? null;
   const env = data?.ENV;
   const plausibleDomain = data?.plausibleDomain;
+  const plausibleScriptUrl = data?.plausibleScriptUrl;
 
   return (
     <html lang="en">
@@ -337,11 +339,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        {plausibleDomain && (
+        {plausibleDomain && plausibleScriptUrl && (
           <script
             defer
             data-domain={plausibleDomain}
-            src="https://plausible.io/js/script.js"
+            src={plausibleScriptUrl}
           />
         )}
       </head>

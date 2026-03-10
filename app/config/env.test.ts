@@ -73,4 +73,22 @@ describe("getEnvConfig", () => {
 
     expect(config.plausibleDomain).toBeUndefined();
   });
+
+  it("should return plausibleScriptUrl when PLAUSIBLE_SCRIPT_URL is set", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
+    process.env.PLAUSIBLE_SCRIPT_URL = "https://analytics.my-fpl.com/js/script.js";
+
+    const config = getEnvConfig();
+
+    expect(config.plausibleScriptUrl).toBe("https://analytics.my-fpl.com/js/script.js");
+  });
+
+  it("should return undefined plausibleScriptUrl when not set", () => {
+    process.env.FPL_LEAGUE_ID = "12345";
+    delete process.env.PLAUSIBLE_SCRIPT_URL;
+
+    const config = getEnvConfig();
+
+    expect(config.plausibleScriptUrl).toBeUndefined();
+  });
 });
