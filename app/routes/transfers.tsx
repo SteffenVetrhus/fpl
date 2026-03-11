@@ -1,16 +1,16 @@
 import { useLoaderData } from "react-router";
 import { fetchLeagueTransferSummaries } from "~/lib/fpl-api/league-data";
 import { getEnvConfig } from "~/config/env";
-import { getOptionalAuth } from "~/lib/pocketbase/auth";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import { TransferTracker } from "~/components/TransferTracker/TransferTracker";
 import type { Route } from "./+types/transfers";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const user = await getOptionalAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
   const transferSummary = await fetchLeagueTransferSummaries(config.fplLeagueId);
 
-  return { transferSummary, currentPlayerName: user?.playerName };
+  return { transferSummary, currentPlayerName: user.playerName };
 }
 
 export default function Transfers({ loaderData }: Route.ComponentProps) {
