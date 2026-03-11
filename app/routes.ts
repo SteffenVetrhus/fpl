@@ -20,6 +20,7 @@ export default [
   route("chip-planner", "routes/chip-planner.tsx"),
   route("price-tracker", "routes/price-tracker.tsx"),
   route("stat-corner", "routes/stat-corner.tsx"),
+  route("strategy-corner", "routes/strategy-corner.tsx"),
   route("ai-advisor", "routes/ai-advisor.tsx"),
   route("news", "routes/news.tsx"),
 

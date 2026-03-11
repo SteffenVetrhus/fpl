@@ -34,6 +34,7 @@ import {
   Bot,
   BookOpen,
   Flame,
+  Lightbulb,
   Calendar,
   Target,
   ArrowRightLeft,
@@ -113,6 +114,7 @@ const toolNavItems = [
   { to: "/chip-planner", label: "Chip Planner", icon: Zap, end: false, color: "#D97706" },
   { to: "/price-tracker", label: "Price Tracker", icon: DollarSign, end: false, color: "#059669" },
   { to: "/stat-corner", label: "Stat Corner", icon: BarChart2, end: false, color: "#0D9488" },
+  { to: "/strategy-corner", label: "Strategy Corner", icon: Lightbulb, end: false, color: "#4338CA" },
   { to: "/ai-advisor", label: "AI Advisor", icon: Brain, end: false, color: "#4338CA" },
   { to: "/news", label: "FPL News", icon: Newspaper, end: false, color: "#0891B2" },
 ];
