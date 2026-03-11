@@ -1,7 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
 import StrategyCornerPage from "./strategy-corner";
+
+vi.mock("~/lib/pocketbase/auth", () => ({
+  requireAuth: vi.fn().mockResolvedValue({
+    id: "user1",
+    email: "test@fpl.local",
+    fplManagerId: 123456,
+    playerName: "Test User",
+    teamName: "Test FC",
+    passwordChanged: true,
+  }),
+}));
 
 describe("Strategy Corner Route", () => {
   function renderPage() {
@@ -10,6 +21,7 @@ describe("Strategy Corner Route", () => {
         {
           path: "/strategy-corner",
           Component: StrategyCornerPage,
+          loader: () => ({}),
         },
       ],
       { initialEntries: ["/strategy-corner"] }
