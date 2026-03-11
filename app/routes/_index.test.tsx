@@ -69,7 +69,7 @@ describe("Home Route (_index)", () => {
       {
         path: "/",
         Component: Index as any,
-        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
+        loader: () => ({ authenticated: true as const, ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -93,7 +93,7 @@ describe("Home Route (_index)", () => {
       {
         path: "/",
         Component: Index as any,
-        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
+        loader: () => ({ authenticated: true as const, ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -109,7 +109,7 @@ describe("Home Route (_index)", () => {
       {
         path: "/",
         Component: Index as any,
-        loader: () => ({ ...mockLeagueData, currentManagerId: 123456 }),
+        loader: () => ({ authenticated: true as const, ...mockLeagueData, currentManagerId: 123456 }),
       },
     ]);
 
@@ -123,7 +123,24 @@ describe("Home Route (_index)", () => {
     expect(screen.getByText(/FPL API/i)).toBeInTheDocument();
   });
 
-  it("loader should fetch league standings", async () => {
+  it("should show landing page when not authenticated", async () => {
+    const RouteStub = createRoutesStub([
+      {
+        path: "/",
+        Component: Index as any,
+        loader: () => ({ authenticated: false as const }),
+      },
+    ]);
+
+    render(<RouteStub />);
+
+    expect(
+      await screen.findByText("FPL Tracker", {}, { timeout: 3000 })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/sign in/i).length).toBeGreaterThan(0);
+  });
+
+  it("loader should fetch league standings for authenticated user", async () => {
     const { fetchLeagueStandings } = await import("~/lib/fpl-api/client");
 
     vi.mocked(fetchLeagueStandings).mockResolvedValue(mockLeagueData);
@@ -132,10 +149,21 @@ describe("Home Route (_index)", () => {
     const result = await loader({ request, params: {}, context: {} } as any);
 
     expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
-    expect(result).toEqual({ ...mockLeagueData, currentManagerId: 123456 });
+    expect(result).toEqual({ authenticated: true, ...mockLeagueData, currentManagerId: 123456 });
   });
 
-  it("loader should handle errors", async () => {
+  it("loader should return unauthenticated for anonymous user", async () => {
+    const { getOptionalAuth } = await import("~/lib/pocketbase/auth");
+
+    vi.mocked(getOptionalAuth).mockResolvedValueOnce(null);
+
+    const request = new Request("http://localhost:3000/");
+    const result = await loader({ request, params: {}, context: {} } as any);
+
+    expect(result).toEqual({ authenticated: false });
+  });
+
+  it("loader should handle errors for authenticated user", async () => {
     const { fetchLeagueStandings } = await import("~/lib/fpl-api/client");
 
     vi.mocked(fetchLeagueStandings).mockRejectedValue(

@@ -1,19 +1,28 @@
-import { useLoaderData } from "react-router";
 import { fetchLeagueStandings } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
 import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { LeagueTable } from "~/components/LeagueTable/LeagueTable";
+import { LandingPage } from "~/components/LandingPage/LandingPage";
 import type { Route } from "./+types/_index";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await getOptionalAuth(request);
+
+  if (!user) {
+    return { authenticated: false as const };
+  }
+
   const config = getEnvConfig();
   const data = await fetchLeagueStandings(config.fplLeagueId);
-  return { ...data, currentManagerId: user?.fplManagerId };
+  return { authenticated: true as const, ...data, currentManagerId: user.fplManagerId };
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-  const data = useLoaderData<typeof loader>();
+  if (!loaderData.authenticated) {
+    return <LandingPage />;
+  }
+
+  const data = loaderData;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-page-league)" }}>
