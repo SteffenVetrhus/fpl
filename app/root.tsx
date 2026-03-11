@@ -10,44 +10,19 @@ import {
   useLocation,
   useRouteLoaderData,
 } from "react-router";
-import { LogOut, User } from "lucide-react";
+import {
+  LogOut, User, Menu, X,
+  Trophy, CalendarDays, BarChart3, ArrowLeftRight,
+  ClipboardList, Calendar, Target, ArrowRightLeft, Gem, Crosshair,
+  Zap, DollarSign, BarChart2, Lightbulb, Brain, Newspaper,
+  Dice6,
+  Armchair, Crown, Drama, Activity, Wallet, Globe,
+  Sparkles, Swords, Bot, BookOpen, Flame,
+} from "lucide-react";
 import { getOptionalAuth, type AuthUser } from "~/lib/pocketbase/auth";
 import { getEnvConfig } from "~/config/env";
 import { fetchBootstrapStatic } from "~/lib/fpl-api/client";
 import { DeadlineTimer } from "~/components/DeadlineTimer";
-
-import {
-  Trophy,
-  CalendarDays,
-  BarChart3,
-  ArrowLeftRight,
-  Menu,
-  X,
-  Armchair,
-  Crown,
-  Drama,
-  Activity,
-  Wallet,
-  Globe,
-  Sparkles,
-  Swords,
-  Bot,
-  BookOpen,
-  Flame,
-  Lightbulb,
-  Calendar,
-  Target,
-  ArrowRightLeft,
-  Gem,
-  Crosshair,
-  Zap,
-  DollarSign,
-  Brain,
-  ClipboardList,
-  Dice6,
-  Newspaper,
-  BarChart2,
-} from "lucide-react";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -137,6 +112,54 @@ const banterNavItems = [
   { to: "/roast-news", label: "Roast News", icon: Flame, end: false, color: "#DC2626" },
 ];
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ size: number; color?: string }>;
+  end: boolean;
+  color: string;
+}
+
+function NavSection({
+  label,
+  items,
+  variant = "compact",
+}: {
+  label: string;
+  items: NavItem[];
+  variant?: "core" | "compact";
+}) {
+  const isCore = variant === "core";
+  return (
+    <div className={`p-4 ${isCore ? "" : "border-t border-white/10"}`}>
+      <p className="kit-stat-label text-white/40 mb-2 px-3">{label}</p>
+      {items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.end}
+          viewTransition
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 ${isCore ? "py-3 mb-1" : "py-2.5 mb-0.5"} rounded-xl text-sm font-medium transition-all ${
+              isActive
+                ? "bg-white/15 text-white"
+                : "text-white/60 hover:text-white hover:bg-white/5"
+            }`
+          }
+        >
+          <div
+            className={`${isCore ? "w-8 h-8 rounded-lg" : "w-7 h-7 rounded-md"} flex items-center justify-center`}
+            style={{ background: item.color }}
+          >
+            <item.icon size={isCore ? 16 : 14} color="white" />
+          </div>
+          {item.label}
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 function HamburgerMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -218,123 +241,10 @@ function HamburgerMenu() {
                 </div>
               )}
 
-              {/* Core navigation */}
-              <div className="p-4">
-                <p className="kit-stat-label text-white/40 mb-2 px-3">Core</p>
-                {coreNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    viewTransition
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all mb-1 ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`
-                    }
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: item.color }}
-                    >
-                      <item.icon size={16} color="white" />
-                    </div>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-
-              {/* Decision Tools - only shown when logged in */}
-              {user && (
-                <div className="p-4 border-t border-white/10">
-                  <p className="kit-stat-label text-white/40 mb-2 px-3">Decision Tools</p>
-                  {toolNavItems.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      viewTransition
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                          isActive
-                            ? "bg-white/15 text-white"
-                            : "text-white/60 hover:text-white hover:bg-white/5"
-                        }`
-                      }
-                    >
-                      <div
-                        className="w-7 h-7 rounded-md flex items-center justify-center"
-                        style={{ background: item.color }}
-                      >
-                        <item.icon size={14} color="white" />
-                      </div>
-                      {item.label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-
-              {/* Mini Games - only shown when logged in */}
-              {user && (
-                <div className="p-4 border-t border-white/10">
-                  <p className="kit-stat-label text-white/40 mb-2 px-3">Mini Games</p>
-                  {miniGameNavItems.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      viewTransition
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                          isActive
-                            ? "bg-white/15 text-white"
-                            : "text-white/60 hover:text-white hover:bg-white/5"
-                        }`
-                      }
-                    >
-                      <div
-                        className="w-7 h-7 rounded-md flex items-center justify-center"
-                        style={{ background: item.color }}
-                      >
-                        <item.icon size={14} color="white" />
-                      </div>
-                      {item.label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-
-              {/* Banter zone - only shown when logged in */}
-              {user && (
-                <div className="p-4 border-t border-white/10">
-                  <p className="kit-stat-label text-white/40 mb-2 px-3">Banter Zone</p>
-                  {banterNavItems.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      viewTransition
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${
-                          isActive
-                            ? "bg-white/15 text-white"
-                            : "text-white/60 hover:text-white hover:bg-white/5"
-                        }`
-                      }
-                    >
-                      <div
-                        className="w-7 h-7 rounded-md flex items-center justify-center"
-                        style={{ background: item.color }}
-                      >
-                        <item.icon size={14} color="white" />
-                      </div>
-                      {item.label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
+              <NavSection label="Core" items={coreNavItems} variant="core" />
+              {user && <NavSection label="Decision Tools" items={toolNavItems} />}
+              {user && <NavSection label="Mini Games" items={miniGameNavItems} />}
+              {user && <NavSection label="Banter Zone" items={banterNavItems} />}
             </div>
           </div>
         </>

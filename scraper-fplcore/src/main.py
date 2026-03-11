@@ -20,6 +20,8 @@ logger = logging.getLogger("scraper-fplcore")
 
 
 def main() -> None:
+    from src.config import validate_env
+    validate_env()
     logger.info("FPL-Core-Insights scraper starting...")
     start = time.time()
 

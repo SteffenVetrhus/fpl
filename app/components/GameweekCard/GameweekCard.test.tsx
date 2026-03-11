@@ -88,4 +88,57 @@ describe("GameweekCard", () => {
     rerender(<GameweekCard gameweek={mockGameweek} isWinner={false} />);
     expect(screen.getByText("#2")).toBeInTheDocument();
   });
+
+  it("should handle 0 points gameweek", () => {
+    const zeroPointsGw = { ...mockGameweek, points: 0, event_transfers_cost: 0 };
+    render(<GameweekCard gameweek={zeroPointsGw} isWinner={false} />);
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("pts")).toBeInTheDocument();
+  });
+
+  it("should handle very large points value (999)", () => {
+    const largePointsGw = { ...mockGameweek, points: 999, event_transfers_cost: 0 };
+    render(<GameweekCard gameweek={largePointsGw} isWinner={false} />);
+    expect(screen.getByText("999")).toBeInTheDocument();
+  });
+
+  it("should handle a large transfer hit (e.g. -20)", () => {
+    const largeHitGw = { ...mockGameweek, points: 50, event_transfers: 6, event_transfers_cost: 20 };
+    render(<GameweekCard gameweek={largeHitGw} isWinner={false} />);
+    // Net points: 50 - 20 = 30
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText(/50 - 20 hit/)).toBeInTheDocument();
+    expect(screen.getByText(/6 transfers.*-20.*hit/i)).toBeInTheDocument();
+  });
+
+  it("should handle bench points of 0", () => {
+    const zeroBenchGw = { ...mockGameweek, points_on_bench: 0 };
+    const { container } = render(<GameweekCard gameweek={zeroBenchGw} isWinner={false} />);
+    const benchLabel = screen.getByText("Bench");
+    const benchValue = benchLabel.parentElement?.querySelector(".font-bold");
+    expect(benchValue).toHaveTextContent("0");
+  });
+
+  it("should handle GW1 (first gameweek boundary)", () => {
+    const gw1 = { ...mockGameweek, event: 1 };
+    render(<GameweekCard gameweek={gw1} isWinner={false} />);
+    expect(screen.getByText(/Gameweek 1/i)).toBeInTheDocument();
+  });
+
+  it("should handle GW38 (last gameweek boundary)", () => {
+    const gw38 = { ...mockGameweek, event: 38 };
+    render(<GameweekCard gameweek={gw38} isWinner={false} />);
+    expect(screen.getByText(/Gameweek 38/i)).toBeInTheDocument();
+  });
+
+  it("should display net points correctly when no transfers made", () => {
+    const noTransfersGw = { ...mockGameweek, event_transfers: 0, event_transfers_cost: 0, points: 65 };
+    render(<GameweekCard gameweek={noTransfersGw} isWinner={false} />);
+    // Net points = 65 - 0 = 65
+    expect(screen.getByText("65")).toBeInTheDocument();
+    // No hit breakdown shown
+    expect(screen.queryByText(/hit/)).not.toBeInTheDocument();
+    // No transfer info shown
+    expect(screen.queryByText(/transfer/i)).not.toBeInTheDocument();
+  });
 });

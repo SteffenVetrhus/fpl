@@ -16,6 +16,8 @@ logger = logging.getLogger("scraper-understat")
 
 
 def main() -> None:
+    from src.config import validate_env
+    validate_env()
     logger.info("Understat scraper starting...")
     start = time.time()
 

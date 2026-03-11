@@ -19,29 +19,52 @@ export interface ManagerTransferSummary {
   lastTransferGW: number;
 }
 
+/** Max concurrent API requests to avoid timeouts for large leagues */
+const BATCH_SIZE = 10;
+
 /**
- * Fetch league standings and all manager histories in parallel.
- * Used by gameweeks and standings route loaders.
+ * Process an array in batches, resolving each batch before starting the next.
+ */
+async function processInBatches<TItem, TResult>(
+  items: TItem[],
+  batchSize: number,
+  fn: (item: TItem) => Promise<TResult>,
+): Promise<TResult[]> {
+  const results: TResult[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+/**
+ * Fetch league standings and all manager histories in batches.
+ * Processes up to BATCH_SIZE managers concurrently to avoid
+ * timeouts for leagues with 50+ members.
  */
 export async function fetchLeagueManagerHistories(
   leagueId: string
 ): Promise<ManagerWithHistory[]> {
   const leagueData = await fetchLeagueStandings(leagueId);
 
-  return Promise.all(
-    leagueData.standings.results.map(async (manager) => {
+  return processInBatches(
+    leagueData.standings.results,
+    BATCH_SIZE,
+    async (manager) => {
       const history = await fetchManagerHistory(manager.entry.toString());
       return {
         name: manager.player_name,
         teamName: manager.entry_name,
         gameweeks: history.current,
       };
-    })
+    },
   );
 }
 
 /**
- * Fetch league standings and all manager transfer summaries in parallel.
+ * Fetch league standings and all manager transfer summaries in batches.
  * Used by the transfers route loader.
  */
 export async function fetchLeagueTransferSummaries(
@@ -49,15 +72,17 @@ export async function fetchLeagueTransferSummaries(
 ): Promise<ManagerTransferSummary[]> {
   const leagueData = await fetchLeagueStandings(leagueId);
 
-  const transferData = await Promise.all(
-    leagueData.standings.results.map(async (manager) => {
+  const transferData = await processInBatches(
+    leagueData.standings.results,
+    BATCH_SIZE,
+    async (manager) => {
       const transfers = await fetchManagerTransfers(manager.entry.toString());
       return {
         managerName: manager.player_name,
         teamName: manager.entry_name,
         transfers,
       };
-    })
+    },
   );
 
   return transferData.map(({ managerName, teamName, transfers }) => ({

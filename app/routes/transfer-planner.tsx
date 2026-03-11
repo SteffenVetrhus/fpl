@@ -9,19 +9,13 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
-  Star,
-  Shield,
-  Trash2,
   RotateCcw,
-  Search,
-  X,
   ArrowRightLeft,
   AlertTriangle,
-  Check,
   Zap,
-  Save,
   Cloud,
   CloudOff,
+  Trash2,
 } from "lucide-react";
 import {
   fetchBootstrapStatic,
@@ -32,14 +26,12 @@ import {
   fetchLeagueStandings,
 } from "~/lib/fpl-api/client";
 import { getEnvConfig } from "~/config/env";
-import { getDifficultyColor } from "~/utils/fixture-difficulty";
 import {
   buildSquadFromPicks,
   applyPlanToSquad,
   calculateHitCost,
   calculateFreeTransfers,
   validateSquad,
-  getPositionLabel,
   groupByPosition,
 } from "~/utils/transfer-planner";
 import type { TransferPlanData, GameweekPlan } from "~/utils/transfer-planner";
@@ -54,46 +46,10 @@ import type { Route } from "./+types/transfer-planner";
 import { requireAuth } from "~/lib/pocketbase/auth";
 import { createServerClient } from "~/lib/pocketbase/client";
 import { sanitizeFilterString } from "~/lib/pocketbase/sanitize";
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface PlayerInfo {
-  id: number;
-  webName: string;
-  teamId: number;
-  teamShort: string;
-  elementType: number;
-  cost: number;
-  form: string;
-  totalPoints: number;
-  status: string;
-  selectedByPercent: string;
-  epNext: string | null;
-}
-
-interface TeamFixtureCell {
-  gameweek: number;
-  opponentShort: string;
-  difficulty: number;
-  isHome: boolean;
-  isBlank: boolean;
-}
-
-interface LoaderData {
-  initialSquad: PlannerSquad | null;
-  allPlayers: PlayerInfo[];
-  teams: { id: number; name: string; shortName: string }[];
-  fixturesByTeam: Record<number, TeamFixtureCell[]>;
-  upcomingGWs: number[];
-  currentGW: number;
-  events: { id: number; name: string; deadlineTime: string }[];
-  managerName: string | null;
-  teamName: string | null;
-  savedPlan: TransferPlanData | null;
-  error: string | null;
-}
+import { PlayerSearchModal } from "~/components/TransferPlanner/PlayerSearchModal";
+import { SquadPlayerRow } from "~/components/TransferPlanner/SquadPlayerRow";
+import type { PlayerInfo, TeamFixtureCell, LoaderData } from "~/components/TransferPlanner/types";
+import { INDIGO, INDIGO_LIGHT, CHIPS } from "~/components/TransferPlanner/types";
 
 // ============================================================================
 // Loader
@@ -296,7 +252,6 @@ export async function action({ request }: Route.ActionArgs) {
         .collection("transfer_plans")
         .getFirstListItem(`user = "${sanitizeFilterString(user.id)}"`)
 ;
-
       // Update existing
       await pb.collection("transfer_plans").update(existing.id, {
         plan_data: planData,
@@ -333,397 +288,65 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 // ============================================================================
-// Constants
+// Helpers
 // ============================================================================
 
-const INDIGO = "#4F46E5";
-const INDIGO_LIGHT = "#6366F1";
-const CHIPS = [
-  { value: "wildcard", label: "Wildcard" },
-  { value: "freehit", label: "Free Hit" },
-  { value: "triplecaptain", label: "Triple Captain" },
-  { value: "bboost", label: "Bench Boost" },
-];
-
-const POSITION_LABELS: Record<number, string> = {
-  1: "GK",
-  2: "DEF",
-  3: "MID",
-  4: "FWD",
-};
-
-// ============================================================================
-// Sub-components
-// ============================================================================
-
-function PlayerSearchModal({
-  isOpen,
-  onClose,
-  onSelect,
-  allPlayers,
-  teams,
-  fixturesByTeam,
-  upcomingGWs,
-  filterPosition,
-  maxCost,
-  excludeIds,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelect: (playerId: number) => void;
-  allPlayers: PlayerInfo[];
-  teams: { id: number; name: string; shortName: string }[];
-  fixturesByTeam: Record<number, TeamFixtureCell[]>;
-  upcomingGWs: number[];
-  filterPosition: number | null;
-  maxCost: number;
-  excludeIds: Set<number>;
-}) {
-  const [search, setSearch] = useState("");
-  const [posFilter, setPosFilter] = useState<number | null>(filterPosition);
-  const [teamFilter, setTeamFilter] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<"form" | "points" | "cost">("form");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setSearch("");
-      setPosFilter(filterPosition);
-      setTeamFilter(null);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen, filterPosition]);
-
-  const filtered = useMemo(() => {
-    let results = allPlayers.filter((p) => !excludeIds.has(p.id));
-
-    if (posFilter) {
-      results = results.filter((p) => p.elementType === posFilter);
-    }
-    if (teamFilter) {
-      results = results.filter((p) => p.teamId === teamFilter);
-    }
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      // Support searching by cost like "4.5"
-      if (/^\d+\.?\d*$/.test(s)) {
-        const targetCost = parseFloat(s);
-        results = results.filter(
-          (p) => Math.abs(p.cost - targetCost) < 0.5
-        );
-      } else {
-        results = results.filter(
-          (p) =>
-            p.webName.toLowerCase().includes(s) ||
-            p.teamShort.toLowerCase().includes(s)
-        );
-      }
-    }
-
-    results = results.filter((p) => p.cost <= maxCost);
-
-    return results
-      .sort((a, b) => {
-        switch (sortBy) {
-          case "form":
-            return parseFloat(b.form) - parseFloat(a.form);
-          case "points":
-            return b.totalPoints - a.totalPoints;
-          case "cost":
-            return b.cost - a.cost;
-        }
-      })
-      .slice(0, 50);
-  }, [allPlayers, excludeIds, posFilter, teamFilter, search, sortBy, maxCost]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="kit-headline text-xl text-gray-900">Select Player</h3>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X size={18} className="text-gray-500" />
-            </button>
-          </div>
-
-          {/* Search bar */}
-          <div className="relative mb-3">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, team, or cost (e.g. 4.5)"
-              className="w-full pl-9 pr-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex gap-1">
-              {[null, 1, 2, 3, 4].map((pos) => (
-                <button
-                  key={pos ?? "all"}
-                  onClick={() => setPosFilter(pos)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                    posFilter === pos
-                      ? "bg-indigo-100 text-indigo-700"
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                  }`}
-                >
-                  {pos ? POSITION_LABELS[pos] : "All"}
-                </button>
-              ))}
-            </div>
-            <select
-              value={teamFilter ?? ""}
-              onChange={(e) =>
-                setTeamFilter(e.target.value ? parseInt(e.target.value) : null)
-              }
-              className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-600 border-0 focus:ring-2 focus:ring-indigo-400"
-            >
-              <option value="">All Teams</option>
-              {teams
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.shortName}
-                  </option>
-                ))}
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(e.target.value as "form" | "points" | "cost")
-              }
-              className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-600 border-0 focus:ring-2 focus:ring-indigo-400"
-            >
-              <option value="form">Sort: Form</option>
-              <option value="points">Sort: Points</option>
-              <option value="cost">Sort: Cost</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="overflow-y-auto flex-1 p-2">
-          {filtered.length === 0 ? (
-            <p className="text-center text-gray-400 py-8 text-sm">
-              No players match your search
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {filtered.map((player) => {
-                const fixtures = (fixturesByTeam[player.teamId] ?? []).slice(
-                  0,
-                  5
-                );
-                return (
-                  <button
-                    key={player.id}
-                    onClick={() => {
-                      onSelect(player.id);
-                      onClose();
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors text-left group"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm truncate">
-                          {player.webName}
-                        </span>
-                        <span className="text-[10px] text-gray-400 font-medium shrink-0">
-                          {player.teamShort} &middot;{" "}
-                          {POSITION_LABELS[player.elementType]}
-                        </span>
-                        {player.status !== "a" && (
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
-                              player.status === "d"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {player.status === "d" ? "Doubt" : "Injured"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500">
-                        <span>{player.cost.toFixed(1)}m</span>
-                        <span>Form: {player.form}</span>
-                        <span>{player.totalPoints} pts</span>
-                        <span>{player.selectedByPercent}%</span>
-                      </div>
-                    </div>
-                    {/* Mini fixture ticker */}
-                    <div className="flex gap-0.5 shrink-0">
-                      {fixtures.map((f, i) => (
-                        <div
-                          key={i}
-                          className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${getDifficultyColor(f.difficulty)}`}
-                          title={`GW${f.gameweek}: ${f.opponentShort} ${f.isHome ? "(H)" : "(A)"}`}
-                        >
-                          {f.isBlank ? "-" : f.opponentShort.slice(0, 3)}
-                        </div>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SquadPlayerRow({
-  player,
-  isSwapping,
-  onSwap,
-  onCaptain,
-  onViceCaptain,
-  onRemoveTransfer,
-  isNewTransfer,
-  fixturesByTeam,
-  upcomingGWs,
-  activeGW,
-}: {
-  player: SquadPlayer;
-  isSwapping: boolean;
-  onSwap: () => void;
-  onCaptain: () => void;
-  onViceCaptain: () => void;
-  onRemoveTransfer: (() => void) | null;
-  isNewTransfer: boolean;
-  fixturesByTeam: Record<number, TeamFixtureCell[]>;
-  upcomingGWs: number[];
-  activeGW: number;
-}) {
-  const fixtures = (fixturesByTeam[player.teamId] ?? []).filter(
-    (f) => f.gameweek >= activeGW
-  ).slice(0, 5);
-
-  return (
-    <div
-      className={`flex items-center gap-2 p-2 rounded-lg transition-all ${
-        isNewTransfer
-          ? "bg-green-50 border border-green-200"
-          : "bg-gray-50 hover:bg-gray-100"
-      } ${isSwapping ? "ring-2 ring-indigo-400" : ""}`}
-    >
-      {/* Position badge */}
-      <span
-        className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-          player.elementType === 1
-            ? "bg-amber-100 text-amber-700"
-            : player.elementType === 2
-              ? "bg-blue-100 text-blue-700"
-              : player.elementType === 3
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-        }`}
-      >
-        {getPositionLabel(player.elementType)}
-      </span>
-
-      {/* Player info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`font-semibold text-sm truncate ${
-              isNewTransfer ? "text-green-800" : "text-gray-900"
-            }`}
-          >
-            {player.webName}
-          </span>
-          {player.status !== "a" && (
-            <AlertTriangle
-              size={12}
-              className={
-                player.status === "d" ? "text-amber-500" : "text-red-500"
-              }
-            />
-          )}
-        </div>
-        <div className="text-[10px] text-gray-500">
-          {player.cost.toFixed(1)}m &middot; {player.form} form
-        </div>
-      </div>
-
-      {/* Mini fixtures */}
-      <div className="flex gap-0.5 shrink-0 max-sm:hidden">
-        {fixtures.map((f, i) => (
-          <div
-            key={i}
-            className={`w-6 h-5 rounded flex items-center justify-center text-[8px] font-bold ${getDifficultyColor(f.difficulty)}`}
-            title={`GW${f.gameweek}: ${f.opponentShort} ${f.isHome ? "(H)" : "(A)"}`}
-          >
-            {f.isBlank ? "-" : f.opponentShort.slice(0, 3)}
-          </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          onClick={onCaptain}
-          title="Set captain"
-          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
-            player.isCaptain
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-200 text-gray-400 hover:bg-indigo-100 hover:text-indigo-600"
-          }`}
-        >
-          C
-        </button>
-        <button
-          onClick={onViceCaptain}
-          title="Set vice-captain"
-          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
-            player.isViceCaptain
-              ? "bg-indigo-400 text-white"
-              : "bg-gray-200 text-gray-400 hover:bg-indigo-100 hover:text-indigo-600"
-          }`}
-        >
-          V
-        </button>
-        <button
-          onClick={onSwap}
-          title="Transfer out"
-          className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
-            isSwapping
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-200 text-gray-400 hover:bg-red-100 hover:text-red-600"
-          }`}
-        >
-          <ArrowRightLeft size={12} />
-        </button>
-        {isNewTransfer && onRemoveTransfer && (
-          <button
-            onClick={onRemoveTransfer}
-            title="Undo transfer"
-            className="w-6 h-6 rounded flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-          >
-            <Trash2 size={12} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
+/**
+ * Build a fake FPLElement array from PlayerInfo for applyPlanToSquad.
+ * Avoids duplicating the boilerplate object literal in multiple useMemo blocks.
+ */
+function buildFakeElements(allPlayers: PlayerInfo[]): FPLElement[] {
+  return allPlayers.map((p) => ({
+    id: p.id,
+    code: 0,
+    element_type: p.elementType,
+    first_name: "",
+    second_name: "",
+    web_name: p.webName,
+    team: p.teamId,
+    team_code: 0,
+    status: p.status as "a" | "d" | "i" | "u",
+    now_cost: Math.round(p.cost * 10),
+    cost_change_start: 0,
+    cost_change_event: 0,
+    total_points: p.totalPoints,
+    event_points: 0,
+    points_per_game: "0.0",
+    ep_this: null,
+    ep_next: p.epNext,
+    form: p.form,
+    selected_by_percent: p.selectedByPercent,
+    transfers_in: 0,
+    transfers_out: 0,
+    transfers_in_event: 0,
+    transfers_out_event: 0,
+    chance_of_playing_this_round: null,
+    chance_of_playing_next_round: null,
+    value_form: "0.0",
+    value_season: "0.0",
+    minutes: 0,
+    goals_scored: 0,
+    assists: 0,
+    clean_sheets: 0,
+    goals_conceded: 0,
+    own_goals: 0,
+    penalties_saved: 0,
+    penalties_missed: 0,
+    yellow_cards: 0,
+    red_cards: 0,
+    saves: 0,
+    bonus: 0,
+    bps: 0,
+    influence: "0.0",
+    creativity: "0.0",
+    threat: "0.0",
+    ict_index: "0.0",
+    starts: 0,
+    expected_goals: "0.0",
+    expected_assists: "0.0",
+    expected_goal_involvements: "0.0",
+    expected_goals_conceded: "0.0",
+  }));
 }
 
 // ============================================================================
@@ -802,71 +425,17 @@ export default function TransferPlannerPage({
   );
 
   // Compute squad state by applying plans up to active GW
-  // Also track free transfers BEFORE the active GW's plan for hit cost calculation
   const { computedSquad, activeGWFreeTransfers } = useMemo(() => {
     if (!initialSquad) return { computedSquad: null, activeGWFreeTransfers: 0 };
 
     let squad = initialSquad;
-    // Build a fake elements array from allPlayers for applyPlanToSquad
-    const fakeElements: FPLElement[] = allPlayers.map((p) => ({
-      id: p.id,
-      code: 0,
-      element_type: p.elementType,
-      first_name: "",
-      second_name: "",
-      web_name: p.webName,
-      team: p.teamId,
-      team_code: 0,
-      status: p.status as "a" | "d" | "i" | "u",
-      now_cost: Math.round(p.cost * 10),
-      cost_change_start: 0,
-      cost_change_event: 0,
-      total_points: p.totalPoints,
-      event_points: 0,
-      points_per_game: "0.0",
-      ep_this: null,
-      ep_next: p.epNext,
-      form: p.form,
-      selected_by_percent: p.selectedByPercent,
-      transfers_in: 0,
-      transfers_out: 0,
-      transfers_in_event: 0,
-      transfers_out_event: 0,
-      chance_of_playing_this_round: null,
-      chance_of_playing_next_round: null,
-      value_form: "0.0",
-      value_season: "0.0",
-      minutes: 0,
-      goals_scored: 0,
-      assists: 0,
-      clean_sheets: 0,
-      goals_conceded: 0,
-      own_goals: 0,
-      penalties_saved: 0,
-      penalties_missed: 0,
-      yellow_cards: 0,
-      red_cards: 0,
-      saves: 0,
-      bonus: 0,
-      bps: 0,
-      influence: "0.0",
-      creativity: "0.0",
-      threat: "0.0",
-      ict_index: "0.0",
-      starts: 0,
-      expected_goals: "0.0",
-      expected_assists: "0.0",
-      expected_goal_involvements: "0.0",
-      expected_goals_conceded: "0.0",
-    }));
+    const fakeElements = buildFakeElements(allPlayers);
 
-    // Track FT before the active GW's plan is applied
     let freeTransfersBeforeActiveGW = squad.freeTransfers;
 
     for (const gw of upcomingGWs) {
       if (gw > activeGW) break;
 
-      // Capture FT before applying the active GW's plan
       if (gw === activeGW) {
         freeTransfersBeforeActiveGW = squad.freeTransfers;
       }
@@ -875,14 +444,12 @@ export default function TransferPlannerPage({
       if (gwPlan && gwPlan.transfers.length > 0) {
         squad = applyPlanToSquad(squad, gwPlan, fakeElements);
       } else if (gwPlan) {
-        // Apply captain/vc changes even without transfers
         squad = applyPlanToSquad(
           squad,
           { ...gwPlan, transfers: [] },
           fakeElements
         );
       } else {
-        // Carry forward free transfers
         squad = {
           ...squad,
           freeTransfers: Math.min(5, squad.freeTransfers + 1),
@@ -918,58 +485,7 @@ export default function TransferPlannerPage({
     if (!initialSquad) return 0;
     let squad = initialSquad;
     let totalHits = 0;
-
-    const fakeElements: FPLElement[] = allPlayers.map((p) => ({
-      id: p.id,
-      code: 0,
-      element_type: p.elementType,
-      first_name: "",
-      second_name: "",
-      web_name: p.webName,
-      team: p.teamId,
-      team_code: 0,
-      status: p.status as "a" | "d" | "i" | "u",
-      now_cost: Math.round(p.cost * 10),
-      cost_change_start: 0,
-      cost_change_event: 0,
-      total_points: p.totalPoints,
-      event_points: 0,
-      points_per_game: "0.0",
-      ep_this: null,
-      ep_next: p.epNext,
-      form: p.form,
-      selected_by_percent: p.selectedByPercent,
-      transfers_in: 0,
-      transfers_out: 0,
-      transfers_in_event: 0,
-      transfers_out_event: 0,
-      chance_of_playing_this_round: null,
-      chance_of_playing_next_round: null,
-      value_form: "0.0",
-      value_season: "0.0",
-      minutes: 0,
-      goals_scored: 0,
-      assists: 0,
-      clean_sheets: 0,
-      goals_conceded: 0,
-      own_goals: 0,
-      penalties_saved: 0,
-      penalties_missed: 0,
-      yellow_cards: 0,
-      red_cards: 0,
-      saves: 0,
-      bonus: 0,
-      bps: 0,
-      influence: "0.0",
-      creativity: "0.0",
-      threat: "0.0",
-      ict_index: "0.0",
-      starts: 0,
-      expected_goals: "0.0",
-      expected_assists: "0.0",
-      expected_goal_involvements: "0.0",
-      expected_goals_conceded: "0.0",
-    }));
+    const fakeElements = buildFakeElements(allPlayers);
 
     for (const gw of upcomingGWs) {
       const gwPlan = plan.gameweeks[gw.toString()];
@@ -1059,14 +575,12 @@ export default function TransferPlannerPage({
     (newPlayerId: number) => {
       if (!swappingPlayerId) return;
 
-      // Check if swapping a player that was already transferred in this GW
       const existingTransfer = currentGWPlan.transfers.find(
         (t) => t.elementIn === swappingPlayerId
       );
 
       let newTransfers;
       if (existingTransfer) {
-        // Replace the existing transfer, keeping the original elementOut
         newTransfers = [
           ...currentGWPlan.transfers.filter(
             (t) => t.elementIn !== swappingPlayerId
