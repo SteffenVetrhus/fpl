@@ -33,7 +33,7 @@ describe("LandingPage", () => {
     });
   });
 
-  it("renders core feature cards", () => {
+  it("renders core feature rows", () => {
     renderWithRouter();
     expect(screen.getByText("League Table")).toBeInTheDocument();
     expect(screen.getByText("Gameweek History")).toBeInTheDocument();
@@ -41,18 +41,20 @@ describe("LandingPage", () => {
     expect(screen.getByText("Transfer Tracker")).toBeInTheDocument();
   });
 
-  it("renders decision tool cards", () => {
+  it("renders decision tool rows", () => {
     renderWithRouter();
-    expect(screen.getAllByText("Captain Picker").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("AI Advisor").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Rival Spy").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Captain Picker")).toBeInTheDocument();
+    expect(screen.getByText("AI Advisor")).toBeInTheDocument();
+    expect(screen.getByText("Rival Spy")).toBeInTheDocument();
+    expect(screen.getByText("Stat Corner")).toBeInTheDocument();
   });
 
-  it("renders banter zone cards", () => {
+  it("renders banter zone rows", () => {
     renderWithRouter();
-    expect(screen.getAllByText("Captain Hindsight").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Transfer Clowns").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Banter Bot").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Captain Hindsight")).toBeInTheDocument();
+    expect(screen.getByText("Transfer Clowns")).toBeInTheDocument();
+    expect(screen.getByText("Banter Bot")).toBeInTheDocument();
+    expect(screen.getByText("Head to Head")).toBeInTheDocument();
   });
 
   it("renders the stats section with feature counts", () => {
@@ -61,7 +63,7 @@ describe("LandingPage", () => {
     expect(screen.getByText("Features")).toBeInTheDocument();
   });
 
-  it("renders section headings", () => {
+  it("renders section headings in card headers", () => {
     renderWithRouter();
     expect(screen.getByText("Track everything")).toBeInTheDocument();
     expect(screen.getByText("Play smarter")).toBeInTheDocument();
