@@ -215,9 +215,11 @@ async function calcHitOrHeroFromAPI(ids: string[], standings: FPLStandingsResult
 }
 
 async function calcCleanSheetShowdownFromAPI(ids: string[], standings: FPLStandingsResult[], gw: number) {
-  const { managerPicks, liveElements } = await fetchPicksAndLive(ids, standings, gw);
+  const [{ managerPicks, liveElements }, bootstrap] = await Promise.all([
+    fetchPicksAndLive(ids, standings, gw),
+    fetchBootstrapStatic(),
+  ]);
 
-  const bootstrap = await fetchBootstrapStatic();
   const elementTypes = new Map(bootstrap.elements.map((e) => [e.id, e.element_type]));
 
   return calcCleanSheetShowdown(managerPicks, liveElements, elementTypes);

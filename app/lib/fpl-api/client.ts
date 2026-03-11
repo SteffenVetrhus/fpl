@@ -16,7 +16,10 @@ import type {
 } from "./types";
 import { getEnvConfig } from "~/config/env";
 
-const API_BASE_URL = "https://fantasy.premierleague.com/api";
+const DEFAULT_API_BASE_URL = "https://fantasy.premierleague.com/api";
+
+/** Default timeout for FPL API requests (30 seconds) */
+const FETCH_TIMEOUT_MS = 30_000;
 
 interface CacheEntry<T> {
   data: T;
@@ -42,11 +45,16 @@ function getTtlForUrl(url: string, defaultTtl: number): number {
   return defaultTtl;
 }
 
+/** In-flight request deduplication map */
+const pendingRequests = new Map<string, Promise<unknown>>();
+
 /**
- * Fetch with in-memory caching. Returns cached response if available and not expired.
+ * Fetch with in-memory caching, request deduplication, and timeout.
+ * Returns cached response if available and not expired.
+ * Deduplicates concurrent requests for the same URL.
  * @param url - The URL to fetch
  * @returns Promise resolving to parsed JSON response
- * @throws Error if fetch fails
+ * @throws Error if fetch fails or times out
  */
 async function cachedFetch<T>(url: string): Promise<T> {
   const config = getEnvConfig();
@@ -58,29 +66,67 @@ async function cachedFetch<T>(url: string): Promise<T> {
     }
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch ${url}: ${response.status} ${response.statusText}`
-    );
+  // Deduplicate concurrent requests for the same URL
+  const pending = pendingRequests.get(url);
+  if (pending) {
+    return pending as Promise<T>;
   }
 
-  const data: T = await response.json();
+  const request = performFetch<T>(url, config.enableCache, config.cacheDuration);
+  pendingRequests.set(url, request);
 
-  if (config.enableCache) {
-    const ttlSeconds = getTtlForUrl(url, config.cacheDuration);
-    cache.set(url, {
-      data,
-      expiresAt: Date.now() + ttlSeconds * 1000,
-    });
+  try {
+    return await request;
+  } finally {
+    pendingRequests.delete(url);
   }
+}
 
-  return data;
+async function performFetch<T>(
+  url: string,
+  enableCache: boolean,
+  cacheDuration: number
+): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch ${url}: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: T = await response.json();
+
+    if (enableCache) {
+      const ttlSeconds = getTtlForUrl(url, cacheDuration);
+      cache.set(url, {
+        data,
+        expiresAt: Date.now() + ttlSeconds * 1000,
+      });
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms: ${url}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /** Clear the API response cache */
 export function clearCache(): void {
   cache.clear();
+}
+
+/** Get the configured API base URL */
+function getBaseUrl(): string {
+  return getEnvConfig().apiBaseUrl || DEFAULT_API_BASE_URL;
 }
 
 /**
@@ -91,7 +137,7 @@ export function clearCache(): void {
  * @throws Error if fetch fails
  */
 export async function fetchBootstrapStatic(): Promise<FPLBootstrapStatic> {
-  return cachedFetch<FPLBootstrapStatic>(`${API_BASE_URL}/bootstrap-static/`);
+  return cachedFetch<FPLBootstrapStatic>(`${getBaseUrl()}/bootstrap-static/`);
 }
 
 /**
@@ -113,7 +159,7 @@ export async function fetchLeagueStandings(
   }
 
   const queryString = params.toString();
-  const url = `${API_BASE_URL}/leagues-classic/${leagueId}/standings/${
+  const url = `${getBaseUrl()}/leagues-classic/${leagueId}/standings/${
     queryString ? `?${queryString}` : ""
   }`;
 
@@ -131,7 +177,7 @@ export async function fetchLeagueStandings(
 export async function fetchManagerEntry(
   managerId: string
 ): Promise<FPLEntry> {
-  return cachedFetch<FPLEntry>(`${API_BASE_URL}/entry/${managerId}/`);
+  return cachedFetch<FPLEntry>(`${getBaseUrl()}/entry/${managerId}/`);
 }
 
 /**
@@ -146,7 +192,7 @@ export async function fetchManagerHistory(
   managerId: string
 ): Promise<FPLManagerHistory> {
   return cachedFetch<FPLManagerHistory>(
-    `${API_BASE_URL}/entry/${managerId}/history/`
+    `${getBaseUrl()}/entry/${managerId}/history/`
   );
 }
 
@@ -162,7 +208,7 @@ export async function fetchManagerTransfers(
   managerId: string
 ): Promise<FPLManagerTransfers> {
   return cachedFetch<FPLManagerTransfers>(
-    `${API_BASE_URL}/entry/${managerId}/transfers/`
+    `${getBaseUrl()}/entry/${managerId}/transfers/`
   );
 }
 
@@ -177,7 +223,7 @@ export async function fetchFixtures(
   gameweek?: number
 ): Promise<FPLFixture[]> {
   const params = gameweek ? `?event=${gameweek}` : "";
-  return cachedFetch<FPLFixture[]>(`${API_BASE_URL}/fixtures/${params}`);
+  return cachedFetch<FPLFixture[]>(`${getBaseUrl()}/fixtures/${params}`);
 }
 
 /**
@@ -191,7 +237,7 @@ export async function fetchElementSummary(
   playerId: number
 ): Promise<FPLElementSummary> {
   return cachedFetch<FPLElementSummary>(
-    `${API_BASE_URL}/element-summary/${playerId}/`
+    `${getBaseUrl()}/element-summary/${playerId}/`
   );
 }
 
@@ -206,7 +252,7 @@ export async function fetchLiveGameweek(
   gameweek: number
 ): Promise<FPLLiveGameweek> {
   return cachedFetch<FPLLiveGameweek>(
-    `${API_BASE_URL}/event/${gameweek}/live/`
+    `${getBaseUrl()}/event/${gameweek}/live/`
   );
 }
 
@@ -224,6 +270,6 @@ export async function fetchGameweekPicks(
   gameweek: number
 ): Promise<FPLGameweekPicks> {
   return cachedFetch<FPLGameweekPicks>(
-    `${API_BASE_URL}/entry/${managerId}/event/${gameweek}/picks/`
+    `${getBaseUrl()}/entry/${managerId}/event/${gameweek}/picks/`
   );
 }
