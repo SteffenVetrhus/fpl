@@ -93,7 +93,8 @@ describe("FPL API Client", () => {
       const result = await fetchBootstrapStatic();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://fantasy.premierleague.com/api/bootstrap-static/"
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result).toEqual(mockData);
       expect(result.events).toHaveLength(1);
@@ -178,7 +179,8 @@ describe("FPL API Client", () => {
       const result = await fetchLeagueStandings("1313411");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://fantasy.premierleague.com/api/leagues-classic/1313411/standings/"
+        "https://fantasy.premierleague.com/api/leagues-classic/1313411/standings/",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result).toEqual(mockData);
       expect(result.standings.results).toHaveLength(2);
@@ -218,7 +220,8 @@ describe("FPL API Client", () => {
       const result = await fetchLeagueStandings("1313411", 2);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://fantasy.premierleague.com/api/leagues-classic/1313411/standings/?page_standings=2"
+        "https://fantasy.premierleague.com/api/leagues-classic/1313411/standings/?page_standings=2",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result.standings.page).toBe(2);
     });
@@ -273,7 +276,8 @@ describe("FPL API Client", () => {
       const result = await fetchManagerHistory("789012");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://fantasy.premierleague.com/api/entry/789012/history/"
+        "https://fantasy.premierleague.com/api/entry/789012/history/",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result).toEqual(mockData);
       expect(result.current).toHaveLength(2);
@@ -325,7 +329,8 @@ describe("FPL API Client", () => {
       const result = await fetchManagerTransfers("789012");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://fantasy.premierleague.com/api/entry/789012/transfers/"
+        "https://fantasy.premierleague.com/api/entry/789012/transfers/",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result).toEqual(mockData);
       expect(result).toHaveLength(2);
@@ -503,6 +508,61 @@ describe("FPL API Client", () => {
 
       await fetchManagerHistory("789012");
       expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should deduplicate concurrent requests for the same URL", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://fantasy.premierleague.com/api",
+        enableCache: false,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ ok: true, json: async () => mockData }),
+              10
+            )
+          )
+      );
+
+      const [result1, result2] = await Promise.all([
+        fetchManagerHistory("789012"),
+        fetchManagerHistory("789012"),
+      ]);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(result1).toEqual(mockData);
+      expect(result2).toEqual(mockData);
+    });
+
+    it("should use custom apiBaseUrl from config", async () => {
+      mockGetEnvConfig.mockReturnValue({
+        fplLeagueId: "1313411",
+        apiBaseUrl: "https://custom-proxy.example.com/api",
+        enableCache: false,
+        cacheDuration: 300,
+        pocketbaseUrl: "http://localhost:8090",
+        pocketbasePublicUrl: "http://localhost:8090",
+      });
+
+      const mockData = { current: [], past: [], chips: [] };
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      await fetchManagerHistory("789012");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://custom-proxy.example.com/api/entry/789012/history/",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      );
     });
 
     it("should not cache failed responses", async () => {

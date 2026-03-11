@@ -215,9 +215,11 @@ async function calcHitOrHeroFromAPI(ids: string[], standings: FPLStandingsResult
 }
 
 async function calcCleanSheetShowdownFromAPI(ids: string[], standings: FPLStandingsResult[], gw: number) {
-  const { managerPicks, liveElements } = await fetchPicksAndLive(ids, standings, gw);
+  const [{ managerPicks, liveElements }, bootstrap] = await Promise.all([
+    fetchPicksAndLive(ids, standings, gw),
+    fetchBootstrapStatic(),
+  ]);
 
-  const bootstrap = await fetchBootstrapStatic();
   const elementTypes = new Map(bootstrap.elements.map((e) => [e.id, e.element_type]));
 
   return calcCleanSheetShowdown(managerPicks, liveElements, elementTypes);
@@ -243,7 +245,35 @@ async function calcRankRocketFromAPI(ids: string[], standings: FPLStandingsResul
 }
 
 async function calcTransferMastermindFromAPI(ids: string[], standings: FPLStandingsResult[], gw: number) {
-  return calcHitOrHeroFromAPI(ids, standings, gw);
+  const nameMap = new Map(standings.map((s) => [s.entry.toString(), s.player_name]));
+
+  const [transferResults, liveData] = await Promise.all([
+    Promise.all(ids.map(async (id) => {
+      try {
+        const transfers = await fetchManagerTransfers(id);
+        return { id: parseInt(id), transfers };
+      } catch {
+        return null;
+      }
+    })),
+    fetchLiveGameweek(gw),
+  ]);
+
+  const managerTransfers = new Map<number, { transfers: FPLTransfer[]; managerName: string }>();
+  for (const result of transferResults) {
+    if (result) {
+      managerTransfers.set(result.id, {
+        transfers: result.transfers,
+        managerName: nameMap.get(result.id.toString()) ?? "Unknown",
+      });
+    }
+  }
+
+  const liveElements = new Map<number, FPLLiveElement>(
+    liveData.elements.map((e) => [e.id, e])
+  );
+
+  return calcTransferMastermind(managerTransfers, liveElements, gw);
 }
 
 async function calcValueSurgeFromAPI(ids: string[], standings: FPLStandingsResult[], gw: number) {

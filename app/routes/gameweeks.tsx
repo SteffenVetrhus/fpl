@@ -1,29 +1,17 @@
 import { useLoaderData, useNavigate, useSearchParams } from "react-router";
-import { fetchLeagueStandings, fetchManagerHistory } from "~/lib/fpl-api/client";
+import { fetchLeagueManagerHistories } from "~/lib/fpl-api/league-data";
 import { getEnvConfig } from "~/config/env";
 import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { GameweekHistory } from "~/components/GameweekHistory/GameweekHistory";
 import { GameweekVictoriesTable } from "~/components/GameweekVictoriesTable/GameweekVictoriesTable";
 import { PlayerSelector } from "~/components/PlayerSelector/PlayerSelector";
 import type { Route } from "./+types/gameweeks";
-import type { FPLManagerGameweek } from "~/lib/fpl-api/types";
 import { ArrowLeft } from "lucide-react";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await getOptionalAuth(request);
   const config = getEnvConfig();
-  const leagueData = await fetchLeagueStandings(config.fplLeagueId);
-
-  const managers = await Promise.all(
-    leagueData.standings.results.map(async (manager) => {
-      const history = await fetchManagerHistory(manager.entry.toString());
-      return {
-        name: manager.player_name,
-        teamName: manager.entry_name,
-        gameweeks: history.current,
-      };
-    })
-  );
+  const managers = await fetchLeagueManagerHistories(config.fplLeagueId);
 
   return { managers, currentPlayerName: user?.playerName };
 }
