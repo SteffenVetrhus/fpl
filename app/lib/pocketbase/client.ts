@@ -40,8 +40,8 @@ export function createBrowserClient(): PocketBase {
  */
 export function getAuthCookieHeader(pb: PocketBase): string {
   return pb.authStore.exportToCookie({
-    httpOnly: false,
-    secure: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
   }, PB_AUTH_COOKIE);
@@ -51,7 +51,8 @@ export function getAuthCookieHeader(pb: PocketBase): string {
  * Create a Set-Cookie header that clears the auth cookie.
  */
 export function getClearAuthCookieHeader(): string {
-  return `${PB_AUTH_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${PB_AUTH_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; HttpOnly${secure}`;
 }
 
 export { PB_AUTH_COOKIE };

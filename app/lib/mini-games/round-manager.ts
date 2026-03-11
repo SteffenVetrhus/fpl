@@ -22,6 +22,7 @@ import {
   assignRankingPoints,
   buildLeaderboard,
 } from "./engine";
+import { sanitizeFilterNumber, sanitizeFilterString } from "~/lib/pocketbase/sanitize";
 
 // ============================================================================
 // Collection Names
@@ -69,7 +70,7 @@ export async function getOrCreateRound(
   // Try to find existing round
   try {
     const existing = await pb.collection(ROUNDS_COLLECTION).getFirstListItem<MiniGameRound>(
-      `league_id = "${leagueId}" && gameweek = ${gameweek}`
+      `league_id = "${sanitizeFilterString(leagueId)}" && gameweek = ${sanitizeFilterNumber(gameweek)}`
     );
     return existing;
   } catch {
@@ -119,7 +120,7 @@ async function getRecentRounds(
 ): Promise<MiniGameRound[]> {
   try {
     const result = await pb.collection(ROUNDS_COLLECTION).getList<MiniGameRound>(1, limit, {
-      filter: `league_id = "${leagueId}" && gameweek < ${beforeGameweek}`,
+      filter: `league_id = "${sanitizeFilterString(leagueId)}" && gameweek < ${sanitizeFilterNumber(beforeGameweek)}`,
       sort: "-gameweek",
     });
     return result.items;
@@ -226,7 +227,7 @@ export async function getLeaderboard(
   let rounds: MiniGameRound[];
   try {
     const roundsResult = await pb.collection(ROUNDS_COLLECTION).getFullList<MiniGameRound>({
-      filter: `league_id = "${leagueId}" && status = "completed"`,
+      filter: `league_id = "${sanitizeFilterString(leagueId)}" && status = "completed"`,
     });
     rounds = roundsResult;
   } catch {
@@ -243,7 +244,7 @@ export async function getLeaderboard(
   let allPairings: MiniGamePairing[] = [];
 
   try {
-    const filterExpr = roundIds.map((id) => `round = "${id}"`).join(" || ");
+    const filterExpr = roundIds.map((id) => `round = "${sanitizeFilterString(id)}"`).join(" || ");
 
     const resultsData = await pb.collection(RESULTS_COLLECTION).getFullList<MiniGameResult>({
       filter: filterExpr,
@@ -271,7 +272,7 @@ export async function getRoundHistory(
 ): Promise<MiniGameRound[]> {
   try {
     const result = await pb.collection(ROUNDS_COLLECTION).getList<MiniGameRound>(1, limit, {
-      filter: `league_id = "${leagueId}"`,
+      filter: `league_id = "${sanitizeFilterString(leagueId)}"`,
       sort: "-gameweek",
     });
     return result.items;
@@ -289,7 +290,7 @@ export async function getRoundPairings(
 ): Promise<MiniGamePairing[]> {
   try {
     return await pb.collection(PAIRINGS_COLLECTION).getFullList<MiniGamePairing>({
-      filter: `round = "${roundId}"`,
+      filter: `round = "${sanitizeFilterString(roundId)}"`,
     });
   } catch {
     return [];
@@ -305,7 +306,7 @@ export async function getRoundResults(
 ): Promise<MiniGameResult[]> {
   try {
     return await pb.collection(RESULTS_COLLECTION).getFullList<MiniGameResult>({
-      filter: `round = "${roundId}"`,
+      filter: `round = "${sanitizeFilterString(roundId)}"`,
       sort: "rank",
     });
   } catch {

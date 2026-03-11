@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate, NavLink } from "react-router";
+import { Form, NavLink, useNavigation, redirect } from "react-router";
 import { requireAuth } from "~/lib/pocketbase/auth";
-import { createBrowserClient } from "~/lib/pocketbase/client";
+import { createServerClient, getAuthCookieHeader } from "~/lib/pocketbase/client";
 import { Lock, ArrowLeft, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import type { Route } from "./+types/change-password";
 
@@ -10,77 +10,68 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { user };
 }
 
-export default function ChangePassword({ loaderData }: Route.ComponentProps) {
+export async function action({ request }: Route.ActionArgs) {
+  const user = await requireAuth(request, { allowPasswordUnchanged: true });
+  const pb = createServerClient(request);
+  const formData = await request.formData();
+
+  const oldPassword = String(formData.get("oldPassword") || "");
+  const newPassword = String(formData.get("newPassword") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    return { error: "All fields are required." };
+  }
+
+  if (newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters long." };
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords do not match." };
+  }
+
+  if (oldPassword === newPassword) {
+    return { error: "New password must be different from your current password." };
+  }
+
+  try {
+    await pb.collection("users").update(user.id, {
+      oldPassword,
+      password: newPassword,
+      passwordConfirm: confirmPassword,
+      password_changed: true,
+    });
+
+    // Re-authenticate with new password to get fresh token
+    await pb.collection("users").authWithPassword(user.email, newPassword);
+  } catch (err: unknown) {
+    const pbErr = err as { status?: number };
+    if (pbErr.status === 400) {
+      return { error: "Current password is incorrect. Please try again." };
+    }
+    if (pbErr.status === 0 || !pbErr.status) {
+      return { error: "Cannot reach auth server. Please try again later." };
+    }
+    return { error: "Password change failed. Please try again later." };
+  }
+
+  const cookieHeader = getAuthCookieHeader(pb);
+
+  throw redirect("/", {
+    headers: { "Set-Cookie": cookieHeader },
+  });
+}
+
+export default function ChangePassword({ loaderData, actionData }: Route.ComponentProps) {
   const { user } = loaderData;
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const error = actionData?.error;
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const navigate = useNavigate();
 
   const isForced = !user.passwordChanged;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters long.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.");
-      return;
-    }
-
-    if (oldPassword === newPassword) {
-      setError("New password must be different from your current password.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const pb = createBrowserClient();
-
-      await pb.collection("users").update(user.id, {
-        oldPassword,
-        password: newPassword,
-        passwordConfirm: confirmPassword,
-        password_changed: true,
-      });
-
-      await pb.collection("users").authWithPassword(user.email, newPassword);
-
-      document.cookie = pb.authStore.exportToCookie(
-        { httpOnly: false, secure: false, sameSite: "lax", path: "/" },
-        "pb_auth",
-      );
-
-      navigate("/");
-    } catch (err: unknown) {
-      const pbErr = err as {
-        status?: number;
-        message?: string;
-        response?: { message?: string };
-      };
-      if (pbErr.status === 400) {
-        setError("Current password is incorrect. Please try again.");
-      } else if (pbErr.status === 0 || !pbErr.status) {
-        setError("Cannot reach auth server. Please try again later.");
-      } else {
-        setError(
-          `Password change failed: ${pbErr.response?.message || pbErr.message || "Unknown error"}`,
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div
@@ -139,7 +130,7 @@ export default function ChangePassword({ loaderData }: Route.ComponentProps) {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <Form method="post" className="space-y-5">
             {error && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 {error}
@@ -156,9 +147,8 @@ export default function ChangePassword({ loaderData }: Route.ComponentProps) {
               <div className="relative">
                 <input
                   id="oldPassword"
+                  name="oldPassword"
                   type={showOldPassword ? "text" : "password"}
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-shadow pr-12"
@@ -185,9 +175,8 @@ export default function ChangePassword({ loaderData }: Route.ComponentProps) {
               <div className="relative">
                 <input
                   id="newPassword"
+                  name="newPassword"
                   type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
                   required
                   minLength={8}
                   autoComplete="new-password"
@@ -214,9 +203,8 @@ export default function ChangePassword({ loaderData }: Route.ComponentProps) {
               </label>
               <input
                 id="confirmPassword"
+                name="confirmPassword"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -227,13 +215,13 @@ export default function ChangePassword({ loaderData }: Route.ComponentProps) {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full py-3 px-6 rounded-xl text-white font-semibold text-sm uppercase tracking-wider transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--color-page-league)" }}
             >
-              {isLoading ? "Updating..." : "Update Password"}
+              {isSubmitting ? "Updating..." : "Update Password"}
             </button>
-          </form>
+          </Form>
 
           {!isForced && (
             <div className="mt-4 text-center">

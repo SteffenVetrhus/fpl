@@ -15,6 +15,7 @@ import type {
   StatMetric,
   SyncLogEntry,
 } from "./types";
+import { sanitizeFilterNumber } from "~/lib/pocketbase/sanitize";
 
 const PB_AUTH_COOKIE = "pb_auth";
 
@@ -56,9 +57,9 @@ export async function fetchPlayerStats(
 ): Promise<GameweekStat[]> {
   const pb = createStatClient(request);
 
-  let filter = `player.fpl_id = ${fplId}`;
+  let filter = `player.fpl_id = ${sanitizeFilterNumber(fplId)}`;
   if (gw !== undefined) {
-    filter += ` && gw = ${gw}`;
+    filter += ` && gw = ${sanitizeFilterNumber(gw)}`;
   }
 
   return withTimeout(
@@ -78,7 +79,7 @@ export async function fetchAllPlayerStats(
   return withTimeout(
     pb.collection("gameweek_stats")
       .getFullList<GameweekStat & { expand?: { player: PlayerRecord } }>({
-        filter: `gw = ${gw}`,
+        filter: `gw = ${sanitizeFilterNumber(gw)}`,
         expand: "player",
         sort: "-fpl_points",
       }),
@@ -103,7 +104,7 @@ export async function fetchPriceHistory(
   return withTimeout(
     pb.collection("price_history")
       .getFullList<PriceSnapshot>({
-        filter: `player.fpl_id = ${fplId} && snapshot_date >= "${since.toISOString()}"`,
+        filter: `player.fpl_id = ${sanitizeFilterNumber(fplId)} && snapshot_date >= "${since.toISOString()}"`,
         sort: "snapshot_date",
       }),
     `fetchPriceHistory(fplId=${fplId})`

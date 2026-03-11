@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from pocketbase import PocketBase
@@ -11,6 +12,22 @@ from pocketbase.utils import ClientResponseError
 from src.config import PB_URL, PB_USER, PB_PASS
 
 logger = logging.getLogger(__name__)
+
+_SAFE_STRING_RE = re.compile(r"^[a-zA-Z0-9_\-@.]+$")
+
+
+def _safe_int(value: object) -> int:
+    """Validate and return an integer safe for PocketBase filter interpolation."""
+    return int(value)  # type: ignore[arg-type]
+
+
+def _safe_str(value: object) -> str:
+    """Validate and return a string safe for PocketBase filter interpolation."""
+    s = str(value)
+    if not s or not _SAFE_STRING_RE.match(s):
+        raise ValueError(f"Invalid string filter value: {s}")
+    return s
+
 
 _client: PocketBase | None = None
 
@@ -31,7 +48,7 @@ def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -
 
     try:
         existing = pb.collection("gameweek_stats").get_first_list_item(
-            f'player = "{player_record_id}" && gw = {gw}'
+            f'player = "{_safe_str(player_record_id)}" && gw = {_safe_int(gw)}'
         )
         record = pb.collection("gameweek_stats").update(existing.id, {
             "player": player_record_id,

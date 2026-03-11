@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { createServerClient } from "~/lib/pocketbase/client";
-import { createBrowserClient, getAuthCookieHeader } from "~/lib/pocketbase/client";
-import { redirect } from "react-router";
+import { Form, useNavigation, redirect } from "react-router";
+import PocketBase from "pocketbase";
+import { createServerClient, getAuthCookieHeader } from "~/lib/pocketbase/client";
+import { getEnvConfig } from "~/config/env";
 import type { Route } from "./+types/login";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -16,61 +15,54 @@ export async function loader({ request }: Route.LoaderArgs) {
       throw redirect("/");
     } catch (err) {
       if (err instanceof Response) throw err;
-      console.log("[login loader] auth refresh failed, showing login", err);
+      // Auth refresh failed, show login page
     }
   }
   return {};
 }
 
-export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const email = String(formData.get("email") || "");
+  const password = String(formData.get("password") || "");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  if (!email || !password) {
+    return { error: "Email and password are required." };
+  }
 
-    try {
-      const pb = createBrowserClient();
-      console.log("[login] attempting auth", { email, pbUrl: pb.baseURL });
-      await pb.collection("users").authWithPassword(email, password);
-      console.log("[login] auth successful", { userId: pb.authStore.record?.id });
+  const config = getEnvConfig();
+  const pb = new PocketBase(config.pocketbaseUrl);
 
-      document.cookie = pb.authStore.exportToCookie({
-        httpOnly: false,
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-      }, "pb_auth");
-
-      if (!pb.authStore.record?.password_changed) {
-        navigate("/profile/change-password");
-      } else {
-        navigate("/");
-      }
-    } catch (err: unknown) {
-      const pbErr = err as { status?: number; message?: string; response?: { message?: string } };
-      console.error("[login] auth failed", {
-        status: pbErr.status,
-        message: pbErr.message,
-        response: pbErr.response,
-        raw: err,
-      });
-      if (pbErr.status === 0 || !pbErr.status) {
-        setError("Cannot reach auth server. Check POCKETBASE_URL configuration.");
-      } else if (pbErr.status === 400) {
-        setError("Invalid email or password. Please try again.");
-      } else {
-        setError(`Login failed (${pbErr.status}): ${pbErr.response?.message || pbErr.message || "Unknown error"}`);
-      }
-    } finally {
-      setIsLoading(false);
+  try {
+    await pb.collection("users").authWithPassword(email, password);
+  } catch (err: unknown) {
+    const pbErr = err as { status?: number };
+    if (pbErr.status === 400) {
+      return { error: "Invalid email or password. Please try again." };
     }
-  };
+    if (pbErr.status === 0 || !pbErr.status) {
+      return { error: "Cannot reach auth server. Please try again later." };
+    }
+    return { error: "Login failed. Please try again or contact your league admin." };
+  }
+
+  const cookieHeader = getAuthCookieHeader(pb);
+
+  if (!pb.authStore.record?.password_changed) {
+    throw redirect("/profile/change-password", {
+      headers: { "Set-Cookie": cookieHeader },
+    });
+  }
+
+  throw redirect("/", {
+    headers: { "Set-Cookie": cookieHeader },
+  });
+}
+
+export default function Login({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const error = actionData?.error;
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-page-league)" }}>
@@ -85,7 +77,7 @@ export default function Login() {
         </div>
 
         <div className="kit-card p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <Form method="post" className="space-y-5">
             {error && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 {error}
@@ -98,9 +90,8 @@ export default function Login() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-shadow"
@@ -115,9 +106,8 @@ export default function Login() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-shadow"
@@ -127,13 +117,13 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full py-3 px-6 rounded-xl text-white font-semibold text-sm uppercase tracking-wider transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--color-page-league)" }}
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isSubmitting ? "Signing in..." : "Sign in"}
             </button>
-          </form>
+          </Form>
         </div>
 
         <p className="text-center text-white/40 text-xs mt-6">
