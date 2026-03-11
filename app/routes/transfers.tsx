@@ -1,5 +1,5 @@
 import { useLoaderData } from "react-router";
-import { fetchLeagueStandings, fetchManagerTransfers } from "~/lib/fpl-api/client";
+import { fetchLeagueTransferSummaries } from "~/lib/fpl-api/league-data";
 import { getEnvConfig } from "~/config/env";
 import { getOptionalAuth } from "~/lib/pocketbase/auth";
 import { TransferTracker } from "~/components/TransferTracker/TransferTracker";
@@ -8,32 +8,7 @@ import type { Route } from "./+types/transfers";
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await getOptionalAuth(request);
   const config = getEnvConfig();
-  const leagueData = await fetchLeagueStandings(config.fplLeagueId);
-
-  const transferData = await Promise.all(
-    leagueData.standings.results.map(async (manager) => {
-      const transfers = await fetchManagerTransfers(manager.entry.toString());
-      return {
-        managerName: manager.player_name,
-        teamName: manager.entry_name,
-        transfers,
-      };
-    })
-  );
-
-  const transferSummary = transferData.map(({ managerName, teamName, transfers }) => {
-    const transferCount = transfers.length;
-    const lastTransferGW = transfers.length > 0
-      ? Math.max(...transfers.map(t => t.event))
-      : 0;
-
-    return {
-      managerName,
-      teamName,
-      transferCount,
-      lastTransferGW,
-    };
-  });
+  const transferSummary = await fetchLeagueTransferSummaries(config.fplLeagueId);
 
   return { transferSummary, currentPlayerName: user?.playerName };
 }

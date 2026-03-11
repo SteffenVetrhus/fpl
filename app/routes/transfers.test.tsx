@@ -2,9 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
 import Transfers, { loader } from "./transfers";
-import type { FPLLeagueStandings, FPLManagerTransfers } from "~/lib/fpl-api/types";
 
-vi.mock("~/lib/fpl-api/client");
+vi.mock("~/lib/fpl-api/league-data");
 vi.mock("~/config/env", () => ({
   getEnvConfig: () => ({ fplLeagueId: "1313411", pocketbaseUrl: "http://localhost:8090" }),
 }));
@@ -19,72 +18,6 @@ vi.mock("~/lib/pocketbase/auth", () => ({
 }));
 
 describe("Transfers Route", () => {
-  const mockLeagueData: FPLLeagueStandings = {
-    league: {
-      id: 1313411,
-      name: "Test League",
-      created: "2024-08-01T00:00:00Z",
-      closed: false,
-      max_entries: null,
-      league_type: "x",
-      scoring: "c",
-      start_event: 1,
-      code_privacy: "p",
-      has_cup: false,
-      cup_league: null,
-      rank: null,
-    },
-    standings: {
-      has_next: false,
-      page: 1,
-      results: [
-        {
-          id: 1,
-          event_total: 92,
-          player_name: "Alice Johnson",
-          rank: 1,
-          last_rank: 2,
-          rank_sort: 1,
-          total: 1543,
-          entry: 123456,
-          entry_name: "Alice's Aces",
-        },
-        {
-          id: 2,
-          event_total: 85,
-          player_name: "Bob Smith",
-          rank: 2,
-          last_rank: 1,
-          rank_sort: 2,
-          total: 1521,
-          entry: 234567,
-          entry_name: "Bob's Bangers",
-        },
-      ],
-    },
-  };
-
-  const mockTransfers: FPLManagerTransfers = [
-    {
-      element_in: 123,
-      element_in_cost: 100,
-      element_out: 456,
-      element_out_cost: 95,
-      entry: 123456,
-      event: 5,
-      time: "2024-09-20T12:00:00Z",
-    },
-    {
-      element_in: 789,
-      element_in_cost: 120,
-      element_out: 234,
-      element_out_cost: 110,
-      entry: 123456,
-      event: 6,
-      time: "2024-09-27T12:00:00Z",
-    },
-  ];
-
   it("should render transfer tracker", async () => {
     const RouteStub = createRoutesStub(
       [
@@ -162,19 +95,19 @@ describe("Transfers Route", () => {
   });
 
   it("loader should fetch transfer data", async () => {
-    const { fetchLeagueStandings, fetchManagerTransfers } = await import(
-      "~/lib/fpl-api/client"
+    const { fetchLeagueTransferSummaries } = await import(
+      "~/lib/fpl-api/league-data"
     );
 
-    vi.mocked(fetchLeagueStandings).mockResolvedValue(mockLeagueData);
-    vi.mocked(fetchManagerTransfers).mockResolvedValue(mockTransfers);
+    vi.mocked(fetchLeagueTransferSummaries).mockResolvedValue([
+      { managerName: "Alice Johnson", teamName: "Alice's Aces", transferCount: 2, lastTransferGW: 6 },
+      { managerName: "Bob Smith", teamName: "Bob's Bangers", transferCount: 5, lastTransferGW: 8 },
+    ]);
 
     const request = new Request("http://localhost:3000/transfers");
     const result = await loader({ request, params: {}, context: {} } as any);
 
-    expect(fetchLeagueStandings).toHaveBeenCalledWith("1313411");
-    expect(fetchManagerTransfers).toHaveBeenCalledWith("123456");
-    expect(fetchManagerTransfers).toHaveBeenCalledWith("234567");
+    expect(fetchLeagueTransferSummaries).toHaveBeenCalledWith("1313411");
     expect(result.transferSummary).toHaveLength(2);
   });
 });

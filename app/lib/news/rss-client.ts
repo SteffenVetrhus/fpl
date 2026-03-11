@@ -7,7 +7,10 @@ import Parser from "rss-parser";
 import type { NewsItem, NewsSource, RSSFeedConfig, RSSFetchResult } from "./types";
 import { getEnvConfig } from "~/config/env";
 
-const parser = new Parser();
+/** 15-second timeout for RSS feed requests (default is 60s) */
+const RSS_TIMEOUT_MS = 15_000;
+
+const parser = new Parser({ timeout: RSS_TIMEOUT_MS });
 
 /** Default FPL RSS feeds */
 export const DEFAULT_RSS_FEEDS: RSSFeedConfig[] = [

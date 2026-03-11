@@ -18,6 +18,9 @@ import type {
 
 const PB_AUTH_COOKIE = "pb_auth";
 
+/** Default timeout for PocketBase requests (30 seconds) */
+const PB_TIMEOUT_MS = 30_000;
+
 function createStatClient(request: Request): PocketBase {
   const config = getEnvConfig();
   const pb = new PocketBase(config.pocketbaseUrl);
@@ -26,8 +29,25 @@ function createStatClient(request: Request): PocketBase {
   return pb;
 }
 
+/** Wrap a promise with a timeout to prevent hanging PocketBase requests */
+async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`PocketBase request timed out after ${PB_TIMEOUT_MS}ms: ${label}`)),
+      PB_TIMEOUT_MS
+    );
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 /**
  * Fetch advanced stats for a single player, optionally filtered by gameweek.
+ * Uses relation filter to avoid a sequential player lookup query.
  */
 export async function fetchPlayerStats(
   request: Request,
@@ -36,24 +56,15 @@ export async function fetchPlayerStats(
 ): Promise<GameweekStat[]> {
   const pb = createStatClient(request);
 
-  // First, get the player record ID from fpl_id
-  const player = await pb
-    .collection("players")
-    .getFirstListItem<PlayerRecord>(`fpl_id = ${fplId}`)
-    .catch(() => null);
-
-  if (!player) return [];
-
-  let filter = `player = "${player.id}"`;
+  let filter = `player.fpl_id = ${fplId}`;
   if (gw !== undefined) {
     filter += ` && gw = ${gw}`;
   }
 
-  const result = await pb
-    .collection("gameweek_stats")
-    .getFullList<GameweekStat>({ filter, sort: "gw" });
-
-  return result;
+  return withTimeout(
+    pb.collection("gameweek_stats").getFullList<GameweekStat>({ filter, sort: "gw" }),
+    `fetchPlayerStats(fplId=${fplId})`
+  );
 }
 
 /**
@@ -64,18 +75,20 @@ export async function fetchAllPlayerStats(
   gw: number,
 ): Promise<(GameweekStat & { expand?: { player: PlayerRecord } })[]> {
   const pb = createStatClient(request);
-  const result = await pb
-    .collection("gameweek_stats")
-    .getFullList<GameweekStat & { expand?: { player: PlayerRecord } }>({
-      filter: `gw = ${gw}`,
-      expand: "player",
-      sort: "-fpl_points",
-    });
-  return result;
+  return withTimeout(
+    pb.collection("gameweek_stats")
+      .getFullList<GameweekStat & { expand?: { player: PlayerRecord } }>({
+        filter: `gw = ${gw}`,
+        expand: "player",
+        sort: "-fpl_points",
+      }),
+    `fetchAllPlayerStats(gw=${gw})`
+  );
 }
 
 /**
  * Fetch price history for a player over the last N days.
+ * Uses relation filter to avoid a sequential player lookup query.
  */
 export async function fetchPriceHistory(
   request: Request,
@@ -84,24 +97,17 @@ export async function fetchPriceHistory(
 ): Promise<PriceSnapshot[]> {
   const pb = createStatClient(request);
 
-  const player = await pb
-    .collection("players")
-    .getFirstListItem<PlayerRecord>(`fpl_id = ${fplId}`)
-    .catch(() => null);
-
-  if (!player) return [];
-
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const result = await pb
-    .collection("price_history")
-    .getFullList<PriceSnapshot>({
-      filter: `player = "${player.id}" && snapshot_date >= "${since.toISOString()}"`,
-      sort: "snapshot_date",
-    });
-
-  return result;
+  return withTimeout(
+    pb.collection("price_history")
+      .getFullList<PriceSnapshot>({
+        filter: `player.fpl_id = ${fplId} && snapshot_date >= "${since.toISOString()}"`,
+        sort: "snapshot_date",
+      }),
+    `fetchPriceHistory(fplId=${fplId})`
+  );
 }
 
 /** In-memory cache for aggregated leaderboard data. */
@@ -132,8 +138,14 @@ export async function fetchAllLeaderboards(
   const pb = createStatClient(request);
 
   const [players, allStats] = await Promise.all([
-    pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
-    pb.collection("gameweek_stats").getFullList<GameweekStat>({ filter: "gw > 0" }),
+    withTimeout(
+      pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
+      "fetchAllLeaderboards:players"
+    ),
+    withTimeout(
+      pb.collection("gameweek_stats").getFullList<GameweekStat>({ filter: "gw > 0" }),
+      "fetchAllLeaderboards:gameweek_stats"
+    ),
   ]);
 
   const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -255,9 +267,10 @@ export async function fetchTopPerformers(
  */
 export async function fetchSyncStatus(request: Request): Promise<SyncLogEntry[]> {
   const pb = createStatClient(request);
-  const result = await pb
-    .collection("sync_log")
-    .getList<SyncLogEntry>(1, 10, { sort: "-created" });
+  const result = await withTimeout(
+    pb.collection("sync_log").getList<SyncLogEntry>(1, 10, { sort: "-created" }),
+    "fetchSyncStatus"
+  );
   return result.items;
 }
 
@@ -266,7 +279,10 @@ export async function fetchSyncStatus(request: Request): Promise<SyncLogEntry[]>
  */
 export async function fetchAllPlayers(request: Request): Promise<PlayerRecord[]> {
   const pb = createStatClient(request);
-  return pb.collection("players").getFullList<PlayerRecord>({ sort: "name" });
+  return withTimeout(
+    pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
+    "fetchAllPlayers"
+  );
 }
 
 /** Extract a numeric metric value from a player summary. */

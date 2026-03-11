@@ -14,6 +14,7 @@ interface CacheEntry {
 
 const twitterCache = new Map<string, CacheEntry>();
 const TWITTER_CACHE_TTL = 300_000; // 5 minutes
+const TWITTER_TIMEOUT_MS = 15_000; // 15 seconds
 
 /** Check if Twitter/X integration is available */
 export function isTwitterAvailable(): boolean {
@@ -82,12 +83,27 @@ export async function fetchFPLTweets(): Promise<NewsItem[]> {
     max_results: config.maxResults.toString(),
   });
 
-  const response = await fetch(`${config.apiBaseUrl}/search?${params}`, {
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TWITTER_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${config.apiBaseUrl}/search?${params}`, {
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`Twitter API request timed out after ${TWITTER_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error(
