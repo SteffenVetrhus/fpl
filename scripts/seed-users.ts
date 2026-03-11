@@ -12,6 +12,8 @@
  */
 
 import PocketBase from "pocketbase";
+import { randomUUID } from "node:crypto";
+import { sanitizeFilterNumber } from "../app/lib/pocketbase/sanitize";
 
 const FPL_API_BASE = "https://fantasy.premierleague.com/api";
 
@@ -70,16 +72,16 @@ async function main() {
   await pb.collection("_superusers").authWithPassword(adminEmail, adminPassword);
   console.log("Authenticated as super admin\n");
 
-  const defaultPassword = "changeme123";
   let created = 0;
   let skipped = 0;
 
   for (const member of members) {
     const email = generateEmail(member.player_name);
+    const password = randomUUID().slice(0, 12);
 
     try {
       const existing = await pb.collection("users").getList(1, 1, {
-        filter: `fpl_manager_id = ${member.entry}`,
+        filter: `fpl_manager_id = ${sanitizeFilterNumber(member.entry)}`,
       });
 
       if (existing.totalItems > 0) {
@@ -90,8 +92,8 @@ async function main() {
 
       await pb.collection("users").create({
         email,
-        password: defaultPassword,
-        passwordConfirm: defaultPassword,
+        password,
+        passwordConfirm: password,
         name: member.player_name,
         fpl_manager_id: member.entry,
         player_name: member.player_name,
@@ -101,7 +103,7 @@ async function main() {
         verified: true,
       });
 
-      console.log(`  CREATE: ${member.player_name} -> ${email}`);
+      console.log(`  CREATE: ${member.player_name} -> ${email} (password: ${password})`);
       created++;
     } catch (err) {
       console.error(`  ERROR: ${member.player_name} - ${err}`);
@@ -109,8 +111,8 @@ async function main() {
   }
 
   console.log(`\nDone! Created: ${created}, Skipped: ${skipped}`);
-  console.log(`\nDefault password for all users: ${defaultPassword}`);
-  console.log("Users should change their password after first login.");
+  console.log("\nPasswords were printed above per-user. Store them securely.");
+  console.log("Users must change their password after first login.");
 }
 
 main().catch((err) => {

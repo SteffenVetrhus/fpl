@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from pocketbase import PocketBase
@@ -11,6 +12,29 @@ from pocketbase.utils import ClientResponseError
 from src.config import PB_URL, PB_USER, PB_PASS
 
 logger = logging.getLogger(__name__)
+
+_SAFE_STRING_RE = re.compile(r"^[a-zA-Z0-9_\-@.]+$")
+
+
+def _safe_int(value: object) -> int:
+    """Validate and return an integer safe for PocketBase filter interpolation."""
+    return int(value)  # type: ignore[arg-type]
+
+
+def _safe_str(value: object) -> str:
+    """Validate and return a string safe for PocketBase filter interpolation."""
+    s = str(value)
+    if not s or not _SAFE_STRING_RE.match(s):
+        raise ValueError(f"Invalid string filter value: {s}")
+    return s
+
+
+def _safe_date_prefix(value: str) -> str:
+    """Validate a YYYY-MM-DD date prefix for PocketBase filter interpolation."""
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+        raise ValueError(f"Invalid date prefix: {value}")
+    return value
+
 
 _client: PocketBase | None = None
 
@@ -32,7 +56,7 @@ def upsert_player(data: dict[str, Any]) -> str:
 
     try:
         existing = pb.collection("players").get_first_list_item(
-            f'fpl_id = {fpl_id}'
+            f'fpl_id = {_safe_int(fpl_id)}'
         )
         record = pb.collection("players").update(existing.id, data)
         return record.id
@@ -47,7 +71,7 @@ def upsert_gameweek_stat(player_record_id: str, gw: int, data: dict[str, Any]) -
 
     try:
         existing = pb.collection("gameweek_stats").get_first_list_item(
-            f'player = "{player_record_id}" && gw = {gw}'
+            f'player = "{_safe_str(player_record_id)}" && gw = {_safe_int(gw)}'
         )
         record = pb.collection("gameweek_stats").update(existing.id, {
             "player": player_record_id,
@@ -73,8 +97,8 @@ def create_price_snapshot(player_record_id: str, data: dict[str, Any]) -> str:
     if date_prefix:
         try:
             existing = pb.collection("price_history").get_first_list_item(
-                f'player = "{player_record_id}" && snapshot_date >= "{date_prefix}" '
-                f'&& snapshot_date < "{date_prefix}T23:59:59Z"'
+                f'player = "{_safe_str(player_record_id)}" && snapshot_date >= "{_safe_date_prefix(date_prefix)}" '
+                f'&& snapshot_date < "{_safe_date_prefix(date_prefix)}T23:59:59Z"'
             )
             record = pb.collection("price_history").update(existing.id, {
                 "player": player_record_id,
@@ -114,7 +138,7 @@ def get_player_by_fpl_id(fpl_id: int) -> Any | None:
     pb = get_client()
     try:
         return pb.collection("players").get_first_list_item(
-            f'fpl_id = {fpl_id}'
+            f'fpl_id = {_safe_int(fpl_id)}'
         )
     except ClientResponseError:
         return None

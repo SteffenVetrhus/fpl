@@ -53,6 +53,7 @@ import type {
 import type { Route } from "./+types/transfer-planner";
 import { requireAuth } from "~/lib/pocketbase/auth";
 import { createServerClient } from "~/lib/pocketbase/client";
+import { sanitizeFilterString } from "~/lib/pocketbase/sanitize";
 
 // ============================================================================
 // Types
@@ -224,7 +225,8 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     try {
       const record = await pb
         .collection("transfer_plans")
-        .getFirstListItem(`user = "${user.id}"`);
+        .getFirstListItem(`user = "${sanitizeFilterString(user.id)}"`)
+;
       if (record?.plan_data) {
         savedPlan = record.plan_data as TransferPlanData;
       }
@@ -292,7 +294,8 @@ export async function action({ request }: Route.ActionArgs) {
       // Try to find existing record
       const existing = await pb
         .collection("transfer_plans")
-        .getFirstListItem(`user = "${user.id}"`);
+        .getFirstListItem(`user = "${sanitizeFilterString(user.id)}"`)
+;
 
       // Update existing
       await pb.collection("transfer_plans").update(existing.id, {
@@ -317,7 +320,8 @@ export async function action({ request }: Route.ActionArgs) {
     try {
       const existing = await pb
         .collection("transfer_plans")
-        .getFirstListItem(`user = "${user.id}"`);
+        .getFirstListItem(`user = "${sanitizeFilterString(user.id)}"`)
+;
       await pb.collection("transfer_plans").delete(existing.id);
     } catch {
       // Nothing to delete
