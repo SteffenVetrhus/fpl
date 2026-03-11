@@ -315,32 +315,50 @@ function StrategyCard({ strategy, isExpanded, onToggle }: {
             </ol>
           </div>
 
-          {/* Important players */}
-          {strategy.importantSections.map((section) => (
-            <div key={section.title} className="px-5 sm:px-6 pb-4">
-              <p className="kit-stat-label text-gray-500 mb-2">{section.title}</p>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {section.include.map((team) => (
-                  <span
-                    key={team}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium"
-                  >
-                    <Check size={12} /> {team}
-                  </span>
-                ))}
+          {/* Important players — side-by-side Target vs Avoid */}
+          <div className="px-5 sm:px-6 pb-4 space-y-4">
+            {strategy.importantSections.map((section) => (
+              <div key={section.title}>
+                <p className="kit-stat-label text-gray-500 mb-2">{section.title}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Target column */}
+                  <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Check size={14} className="text-emerald-600" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Target</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {section.include.map((team) => (
+                        <span
+                          key={team}
+                          className="px-2 py-0.5 rounded bg-emerald-600 text-white text-xs font-bold"
+                        >
+                          {team}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Avoid column */}
+                  <div className="rounded-xl bg-red-50 border border-red-100 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <XIcon size={14} className="text-red-500" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-red-600">Avoid</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {section.exclude.map((team) => (
+                        <span
+                          key={team}
+                          className="px-2 py-0.5 rounded bg-red-500 text-white text-xs font-bold"
+                        >
+                          {team}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {section.exclude.map((team) => (
-                  <span
-                    key={team}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-medium"
-                  >
-                    <XIcon size={12} /> {team}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* Works if */}
           <div className="p-5 sm:p-6 bg-gray-50 border-t border-gray-100">
