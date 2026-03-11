@@ -178,7 +178,7 @@ const strategies: Strategy[] = [
   },
 ];
 
-type FixtureType = "home" | "away" | "blank" | "double_home" | "double_away" | "double_mixed";
+type FixtureType = "home" | "away" | "blank";
 
 interface Fixture {
   opponent: string;
@@ -216,46 +216,41 @@ const fixtureData: TeamFixtures[] = [
 
 const gameweekColumns = ["BGW31", "GW32", "DGW33", "BGW34", "GW35", "DGW36/7"];
 
-function getGameweekBadgeStyle(gw: string): { bg: string; text: string } {
-  if (gw.startsWith("BGW")) return { bg: "bg-red-500/20 text-red-400", text: "Blank" };
-  if (gw.startsWith("DGW")) return { bg: "bg-green-500/20 text-green-400", text: "Double" };
-  return { bg: "bg-gray-500/20 text-gray-400", text: "" };
-}
+const CHIP_META: Record<string, { abbr: string; color: string; bg: string }> = {
+  "Wildcard": { abbr: "WC", color: "#059669", bg: "bg-emerald-50" },
+  "Free Hit": { abbr: "FH", color: "#0891B2", bg: "bg-cyan-50" },
+  "Bench Boost": { abbr: "BB", color: "#2563EB", bg: "bg-blue-50" },
+  "Triple Captain": { abbr: "TC", color: "#7C3AED", bg: "bg-purple-50" },
+};
 
-function getFixtureCellStyle(fixtures: Fixture[]): string {
-  if (fixtures.length === 0 || (fixtures.length === 1 && fixtures[0].type === "blank")) {
-    return "bg-red-900/40 text-red-300";
-  }
-  if (fixtures.length >= 2) {
-    return "bg-green-900/40 text-green-200";
-  }
-  if (fixtures[0].type === "home") {
-    return "bg-gray-800/60 text-white";
-  }
-  return "bg-gray-800/40 text-gray-300";
-}
-
-function ChipBadge({ name, gameweek, optional }: ChipSchedule) {
-  const chipColors: Record<string, string> = {
-    "Wildcard": "from-green-500 to-emerald-600",
-    "Bench Boost": "from-cyan-500 to-blue-600",
-    "Free Hit": "from-cyan-400 to-teal-500",
-    "Triple Captain": "from-purple-500 to-indigo-600",
-  };
-
+function ChipTimeline({ chips }: { chips: ChipSchedule[] }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div
-        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${chipColors[name] ?? "from-gray-500 to-gray-600"} flex items-center justify-center shadow-lg`}
-      >
-        <span className="text-white font-bold text-xs sm:text-sm text-center leading-tight px-0.5">
-          {name === "Bench Boost" ? "BB" : name === "Free Hit" ? "FH" : name === "Triple Captain" ? "TC" : "WC"}
-        </span>
-      </div>
-      <span className="text-xs font-semibold text-white">{gameweek}</span>
-      {optional && (
-        <span className="text-[10px] text-white/50 italic">optional</span>
-      )}
+    <div className="flex items-stretch justify-center gap-0 flex-wrap">
+      {chips.map((chip, i) => {
+        const meta = CHIP_META[chip.name] ?? { abbr: "?", color: "#6B7280", bg: "bg-gray-50" };
+        return (
+          <div key={chip.name} className="flex items-center">
+            {/* Chip card */}
+            <div className={`${meta.bg} rounded-xl px-4 py-3 flex flex-col items-center gap-1.5 min-w-[72px]`}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                style={{ background: meta.color }}
+              >
+                {meta.abbr}
+              </div>
+              <span className="text-xs font-bold text-gray-900">{chip.gameweek}</span>
+              <span className="text-[10px] font-medium text-gray-500">{chip.name}</span>
+              {chip.optional && (
+                <span className="text-[9px] text-gray-400 italic">optional</span>
+              )}
+            </div>
+            {/* Connector arrow */}
+            {i < chips.length - 1 && (
+              <div className="px-1 text-gray-300 text-lg hidden sm:block">&rarr;</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -297,13 +292,9 @@ function StrategyCard({ strategy, isExpanded, onToggle }: {
       {isExpanded && (
         <div className="border-t border-gray-100">
           {/* Chip schedule */}
-          <div className="p-5 sm:p-6 bg-gray-900 rounded-none">
-            <p className="kit-stat-label text-white/60 mb-4">Chip Schedule</p>
-            <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
-              {strategy.chips.map((chip) => (
-                <ChipBadge key={chip.name} {...chip} />
-              ))}
-            </div>
+          <div className="p-5 sm:p-6 bg-gray-50">
+            <p className="kit-stat-label text-gray-500 mb-4">Chip Schedule</p>
+            <ChipTimeline chips={strategy.chips} />
           </div>
 
           {/* How to play */}
@@ -371,69 +362,92 @@ function StrategyCard({ strategy, isExpanded, onToggle }: {
   );
 }
 
+function getFixtureCellColor(fixture: Fixture): string {
+  if (fixture.type === "blank") return "bg-gray-200 text-gray-500";
+  if (fixture.type === "home") return "bg-green-400 text-white";
+  return "bg-amber-400 text-gray-900";
+}
+
 function FixtureGrid() {
   return (
-    <div className="kit-card overflow-hidden">
-      <div className="p-5 sm:p-6">
-        <h3 className="kit-headline text-lg sm:text-xl text-gray-900 mb-1">Fixture Grid</h3>
-        <p className="text-sm text-gray-500 mb-4">BGW31 through DGW36/37 — plan your chip timing</p>
+    <div className="kit-card p-4 md:p-6 overflow-hidden">
+      <h3 className="kit-headline text-xl md:text-2xl text-gray-900 mb-1">Fixture Grid</h3>
+      <p className="text-sm text-gray-500 mb-4">BGW31 through DGW36/37 — plan your chip timing</p>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-3 mb-4 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-red-500/30" /> Blank GW
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-green-500/30" /> Double GW
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-gray-700" /> Home
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-gray-500" /> Away
-          </span>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold bg-green-400 text-white">
+          <span>Home</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-400 text-gray-900">
+          <span>Away</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold bg-gray-200 text-gray-500">
+          <span>Blank</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-white">
+          <span>DGW</span><span className="opacity-75">Double</span>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs sm:text-sm min-w-[640px]">
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <table className="w-full min-w-[600px] border-collapse">
           <thead>
-            <tr className="bg-gray-900 text-white">
-              <th className="px-3 py-2.5 text-left font-semibold sticky left-0 bg-gray-900 z-10">Team</th>
-              {gameweekColumns.map((gw) => {
-                const badge = getGameweekBadgeStyle(gw);
-                return (
-                  <th key={gw} className="px-2 py-2.5 text-center font-semibold">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${badge.bg}`}>
-                      {gw}
-                    </span>
-                  </th>
-                );
-              })}
+            <tr>
+              <th className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500 pb-3 pr-3 sticky left-0 bg-white z-10 min-w-[80px]">
+                Team
+              </th>
+              {gameweekColumns.map((gw) => (
+                <th
+                  key={gw}
+                  className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500 pb-3 px-1"
+                >
+                  {gw}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {fixtureData.map((team, idx) => (
-              <tr
-                key={team.shortName}
-                className={idx % 2 === 0 ? "bg-gray-950" : "bg-gray-900"}
-              >
-                <td className={`px-3 py-2 font-bold text-white sticky left-0 z-10 ${idx % 2 === 0 ? "bg-gray-950" : "bg-gray-900"}`}>
-                  {team.shortName}
+              <tr key={team.shortName} className="kit-table-row">
+                <td className="py-1.5 pr-3 sticky left-0 bg-white z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-5 text-right font-mono">
+                      {idx + 1}
+                    </span>
+                    <span className="font-semibold text-sm text-gray-900 whitespace-nowrap">
+                      {team.shortName}
+                    </span>
+                  </div>
                 </td>
                 {gameweekColumns.map((gw) => {
                   const fixtures = team.fixtures[gw] ?? [];
-                  const cellStyle = getFixtureCellStyle(fixtures);
+                  const isBlank = fixtures.length === 0 || (fixtures.length === 1 && fixtures[0].type === "blank");
+                  const isDouble = fixtures.length >= 2;
+
                   return (
-                    <td key={gw} className={`px-2 py-2 text-center ${cellStyle}`}>
-                      {fixtures.length === 0 || (fixtures.length === 1 && fixtures[0].type === "blank") ? (
-                        <span className="text-red-400/60">—</span>
+                    <td key={gw} className="p-0.5">
+                      {isBlank ? (
+                        <div className="rounded px-1.5 py-2 text-center text-xs font-bold whitespace-nowrap bg-gray-200 text-gray-500 italic opacity-60">
+                          &mdash;
+                        </div>
+                      ) : isDouble ? (
+                        <div className="flex flex-col gap-0.5">
+                          {fixtures.map((f, i) => (
+                            <div
+                              key={i}
+                              className={`rounded px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight ${getFixtureCellColor(f)}`}
+                            >
+                              {f.opponent}
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        fixtures.map((f, i) => (
-                          <div key={i} className="leading-tight">
-                            {f.opponent}
-                          </div>
-                        ))
+                        <div
+                          className={`rounded px-1.5 py-2 text-center text-xs font-bold whitespace-nowrap ${getFixtureCellColor(fixtures[0])}`}
+                        >
+                          {fixtures[0].opponent}
+                        </div>
                       )}
                     </td>
                   );
