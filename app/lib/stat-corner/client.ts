@@ -123,9 +123,79 @@ const LEADERBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 /** Results from fetchAllLeaderboards keyed by metric. */
 export type LeaderboardResults = Record<StatMetric, PlayerStatSummary[]>;
 
+/** Page size for paginated fetching of gameweek stats */
+const STATS_PAGE_SIZE = 500;
+
 /**
- * Fetch all leaderboards in a single pass. Fetches players and gameweek_stats
- * once, aggregates once, then sorts by each metric. Results are cached
+ * Aggregate a single stat record into the summaries map.
+ */
+function aggregateStat(
+  summaries: Map<string, PlayerStatSummary>,
+  stat: GameweekStat,
+  player: PlayerRecord,
+): void {
+  const existing = summaries.get(stat.player);
+  if (existing) {
+    existing.totalMinutes += stat.minutes || 0;
+    existing.totalGoals += stat.goals || 0;
+    existing.totalAssists += stat.assists || 0;
+    existing.totalXg += stat.xg || 0;
+    existing.totalNpxg += stat.npxg || 0;
+    existing.totalXa += stat.xa || 0;
+    existing.totalShots += stat.shots || 0;
+    existing.totalKeyPasses += stat.key_passes || 0;
+    existing.totalFplPoints += stat.fpl_points || 0;
+    existing.totalCbit += stat.cbit || 0;
+    existing.totalBallRecoveries += stat.ball_recoveries || 0;
+    existing.totalProgressiveCarries += stat.progressive_carries || 0;
+    existing.totalSca += stat.sca || 0;
+    existing.totalChancesCreated += stat.chances_created || 0;
+    existing.totalSuccessfulDribbles += stat.successful_dribbles || 0;
+    existing.totalTouchesOppositionBox += stat.touches_opposition_box || 0;
+    existing.totalRecoveries += stat.recoveries || 0;
+    existing.totalDuelsWon += stat.duels_won || 0;
+    existing.totalAerialDuelsWon += stat.aerial_duels_won || 0;
+    existing.totalBigChancesMissed += stat.big_chances_missed || 0;
+    existing.totalGoalsPrevented += stat.goals_prevented || 0;
+    existing.totalDefensiveContributions += stat.defensive_contributions || 0;
+    existing.gameweeks += 1;
+  } else {
+    summaries.set(stat.player, {
+      player,
+      totalMinutes: stat.minutes || 0,
+      totalGoals: stat.goals || 0,
+      totalAssists: stat.assists || 0,
+      totalXg: stat.xg || 0,
+      totalNpxg: stat.npxg || 0,
+      totalXa: stat.xa || 0,
+      totalShots: stat.shots || 0,
+      totalKeyPasses: stat.key_passes || 0,
+      totalCbit: stat.cbit || 0,
+      totalBallRecoveries: stat.ball_recoveries || 0,
+      totalProgressiveCarries: stat.progressive_carries || 0,
+      totalSca: stat.sca || 0,
+      totalFplPoints: stat.fpl_points || 0,
+      overperformance: 0,
+      xgPer90: 0,
+      xaPer90: 0,
+      cbitPer90: 0,
+      gameweeks: 1,
+      totalChancesCreated: stat.chances_created || 0,
+      totalSuccessfulDribbles: stat.successful_dribbles || 0,
+      totalTouchesOppositionBox: stat.touches_opposition_box || 0,
+      totalRecoveries: stat.recoveries || 0,
+      totalDuelsWon: stat.duels_won || 0,
+      totalAerialDuelsWon: stat.aerial_duels_won || 0,
+      totalBigChancesMissed: stat.big_chances_missed || 0,
+      totalGoalsPrevented: stat.goals_prevented || 0,
+      totalDefensiveContributions: stat.defensive_contributions || 0,
+    });
+  }
+}
+
+/**
+ * Fetch all leaderboards using paginated queries to avoid loading
+ * all gameweek_stats into memory at once. Results are cached
  * in-memory for 5 minutes.
  */
 export async function fetchAllLeaderboards(
@@ -138,84 +208,35 @@ export async function fetchAllLeaderboards(
 
   const pb = createStatClient(request);
 
-  const [players, allStats] = await Promise.all([
-    withTimeout(
-      pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
-      "fetchAllLeaderboards:players"
-    ),
-    withTimeout(
-      pb.collection("gameweek_stats").getFullList<GameweekStat>({ filter: "gw > 0" }),
-      "fetchAllLeaderboards:gameweek_stats"
-    ),
-  ]);
-
+  // Fetch players (small collection, safe to load fully)
+  const players = await withTimeout(
+    pb.collection("players").getFullList<PlayerRecord>({ sort: "name" }),
+    "fetchAllLeaderboards:players"
+  );
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
-  // Aggregate per player (single pass)
+  // Paginate through gameweek_stats and aggregate incrementally
   const summaries = new Map<string, PlayerStatSummary>();
+  let page = 1;
+  let totalPages = 1;
 
-  for (const stat of allStats) {
-    const player = playerMap.get(stat.player);
-    if (!player) continue;
+  do {
+    const result = await withTimeout(
+      pb.collection("gameweek_stats").getList<GameweekStat>(page, STATS_PAGE_SIZE, {
+        filter: "gw > 0",
+      }),
+      `fetchAllLeaderboards:gameweek_stats:page${page}`
+    );
 
-    const existing = summaries.get(stat.player);
-    if (existing) {
-      existing.totalMinutes += stat.minutes || 0;
-      existing.totalGoals += stat.goals || 0;
-      existing.totalAssists += stat.assists || 0;
-      existing.totalXg += stat.xg || 0;
-      existing.totalNpxg += stat.npxg || 0;
-      existing.totalXa += stat.xa || 0;
-      existing.totalShots += stat.shots || 0;
-      existing.totalKeyPasses += stat.key_passes || 0;
-      existing.totalFplPoints += stat.fpl_points || 0;
-      existing.totalCbit += stat.cbit || 0;
-      existing.totalBallRecoveries += stat.ball_recoveries || 0;
-      existing.totalProgressiveCarries += stat.progressive_carries || 0;
-      existing.totalSca += stat.sca || 0;
-      existing.totalChancesCreated += stat.chances_created || 0;
-      existing.totalSuccessfulDribbles += stat.successful_dribbles || 0;
-      existing.totalTouchesOppositionBox += stat.touches_opposition_box || 0;
-      existing.totalRecoveries += stat.recoveries || 0;
-      existing.totalDuelsWon += stat.duels_won || 0;
-      existing.totalAerialDuelsWon += stat.aerial_duels_won || 0;
-      existing.totalBigChancesMissed += stat.big_chances_missed || 0;
-      existing.totalGoalsPrevented += stat.goals_prevented || 0;
-      existing.totalDefensiveContributions += stat.defensive_contributions || 0;
-      existing.gameweeks += 1;
-    } else {
-      summaries.set(stat.player, {
-        player,
-        totalMinutes: stat.minutes || 0,
-        totalGoals: stat.goals || 0,
-        totalAssists: stat.assists || 0,
-        totalXg: stat.xg || 0,
-        totalNpxg: stat.npxg || 0,
-        totalXa: stat.xa || 0,
-        totalShots: stat.shots || 0,
-        totalKeyPasses: stat.key_passes || 0,
-        totalCbit: stat.cbit || 0,
-        totalBallRecoveries: stat.ball_recoveries || 0,
-        totalProgressiveCarries: stat.progressive_carries || 0,
-        totalSca: stat.sca || 0,
-        totalFplPoints: stat.fpl_points || 0,
-        overperformance: 0,
-        xgPer90: 0,
-        xaPer90: 0,
-        cbitPer90: 0,
-        gameweeks: 1,
-        totalChancesCreated: stat.chances_created || 0,
-        totalSuccessfulDribbles: stat.successful_dribbles || 0,
-        totalTouchesOppositionBox: stat.touches_opposition_box || 0,
-        totalRecoveries: stat.recoveries || 0,
-        totalDuelsWon: stat.duels_won || 0,
-        totalAerialDuelsWon: stat.aerial_duels_won || 0,
-        totalBigChancesMissed: stat.big_chances_missed || 0,
-        totalGoalsPrevented: stat.goals_prevented || 0,
-        totalDefensiveContributions: stat.defensive_contributions || 0,
-      });
+    for (const stat of result.items) {
+      const player = playerMap.get(stat.player);
+      if (!player) continue;
+      aggregateStat(summaries, stat, player);
     }
-  }
+
+    totalPages = result.totalPages;
+    page++;
+  } while (page <= totalPages);
 
   // Compute derived metrics
   for (const [, summary] of summaries) {

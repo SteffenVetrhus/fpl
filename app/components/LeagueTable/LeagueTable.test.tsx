@@ -137,4 +137,123 @@ describe("LeagueTable", () => {
     expect(screen.getAllByRole("row")).toHaveLength(4); // Header + 3 data rows
     expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
   });
+
+  it("should render a single-manager league", () => {
+    const singleManager: FPLStandingsResult[] = [
+      {
+        id: 1,
+        event_total: 65,
+        player_name: "Solo Player",
+        rank: 1,
+        last_rank: 1,
+        rank_sort: 1,
+        total: 900,
+        entry: 111111,
+        entry_name: "Lone Wolves",
+      },
+    ];
+
+    render(<LeagueTable standings={singleManager} />);
+
+    expect(screen.getAllByText("Solo Player").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lone Wolves").length).toBeGreaterThan(0);
+    expect(screen.getByText("900")).toBeInTheDocument();
+    // Header row + 1 data row
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+  });
+
+  it("should render a large number of managers", () => {
+    const largeStandings: FPLStandingsResult[] = Array.from(
+      { length: 20 },
+      (_, i) => ({
+        id: i + 1,
+        event_total: 80 - i,
+        player_name: `Manager ${i + 1}`,
+        rank: i + 1,
+        last_rank: i + 1,
+        rank_sort: i + 1,
+        total: 2000 - i * 50,
+        entry: 100000 + i,
+        entry_name: `Team ${i + 1}`,
+      })
+    );
+
+    render(<LeagueTable standings={largeStandings} />);
+
+    // Header row + 20 data rows
+    expect(screen.getAllByRole("row")).toHaveLength(21);
+    // Verify first and last managers rendered
+    expect(screen.getAllByText("Manager 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Manager 20").length).toBeGreaterThan(0);
+  });
+
+  it("should display managers in rank order", () => {
+    render(<LeagueTable standings={mockStandings} />);
+
+    const rows = screen.getAllByRole("row");
+    // Skip header row (index 0)
+    const dataRows = rows.slice(1);
+
+    expect(dataRows[0].textContent).toContain("Alice Johnson");
+    expect(dataRows[1].textContent).toContain("Bob Smith");
+    expect(dataRows[2].textContent).toContain("Charlie Brown");
+  });
+
+  it("should handle event_total of 0 (blank gameweek)", () => {
+    const blankGameweek: FPLStandingsResult[] = [
+      {
+        id: 1,
+        event_total: 0,
+        player_name: "Zero Points",
+        rank: 1,
+        last_rank: 1,
+        rank_sort: 1,
+        total: 500,
+        entry: 999999,
+        entry_name: "Blankers",
+      },
+    ];
+
+    render(<LeagueTable standings={blankGameweek} />);
+
+    expect(screen.getAllByText("Zero Points").length).toBeGreaterThan(0);
+    // event_total of 0 should render
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("500")).toBeInTheDocument();
+  });
+
+  it("should handle identical ranks (two managers at rank 1)", () => {
+    const tiedStandings: FPLStandingsResult[] = [
+      {
+        id: 1,
+        event_total: 75,
+        player_name: "Tied First A",
+        rank: 1,
+        last_rank: 1,
+        rank_sort: 1,
+        total: 1200,
+        entry: 500001,
+        entry_name: "Team Tied A",
+      },
+      {
+        id: 2,
+        event_total: 75,
+        player_name: "Tied First B",
+        rank: 1,
+        last_rank: 2,
+        rank_sort: 2,
+        total: 1200,
+        entry: 500002,
+        entry_name: "Team Tied B",
+      },
+    ];
+
+    render(<LeagueTable standings={tiedStandings} />);
+
+    expect(screen.getAllByText("Tied First A").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Tied First B").length).toBeGreaterThan(0);
+    // Both managers display rank 1
+    const rankCells = screen.getAllByText("1");
+    expect(rankCells.length).toBeGreaterThanOrEqual(2);
+  });
 });

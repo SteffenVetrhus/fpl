@@ -16,6 +16,8 @@ logger = logging.getLogger("scraper-fpl")
 
 
 def main() -> None:
+    from src.config import validate_env
+    validate_env()
     logger.info("FPL sync starting...")
     start = time.time()
 
