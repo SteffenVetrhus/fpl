@@ -362,8 +362,9 @@ function StrategyCard({ strategy, isExpanded, onToggle }: {
   );
 }
 
-function getFixtureCellColor(fixture: Fixture): string {
+function getFixtureCellColor(fixture: Fixture, isDouble: boolean): string {
   if (fixture.type === "blank") return "bg-gray-200 text-gray-500";
+  if (isDouble) return "bg-emerald-500 text-white";
   if (fixture.type === "home") return "bg-green-400 text-white";
   return "bg-amber-400 text-gray-900";
 }
@@ -436,7 +437,7 @@ function FixtureGrid() {
                           {fixtures.map((f, i) => (
                             <div
                               key={i}
-                              className={`rounded px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight ${getFixtureCellColor(f)}`}
+                              className={`rounded px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight ${getFixtureCellColor(f, true)}`}
                             >
                               {f.opponent}
                             </div>
@@ -444,7 +445,7 @@ function FixtureGrid() {
                         </div>
                       ) : (
                         <div
-                          className={`rounded px-1.5 py-2 text-center text-xs font-bold whitespace-nowrap ${getFixtureCellColor(fixtures[0])}`}
+                          className={`rounded px-1.5 py-2 text-center text-xs font-bold whitespace-nowrap ${getFixtureCellColor(fixtures[0], false)}`}
                         >
                           {fixtures[0].opponent}
                         </div>
