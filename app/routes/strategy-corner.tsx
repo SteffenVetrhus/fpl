@@ -230,8 +230,8 @@ function ChipTimeline({ chips }: { chips: ChipSchedule[] }) {
         const meta = CHIP_META[chip.name] ?? { abbr: "?", color: "#6B7280", bg: "bg-gray-50" };
         return (
           <div key={chip.name} className="flex items-center">
-            {/* Chip card */}
-            <div className={`${meta.bg} rounded-xl px-4 py-3 flex flex-col items-center gap-1.5 min-w-[72px]`}>
+            {/* Chip card — fixed height so all cards align */}
+            <div className={`${meta.bg} rounded-xl px-4 py-3 flex flex-col items-center gap-1.5 min-w-[72px] h-[120px] justify-center`}>
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm"
                 style={{ background: meta.color }}
@@ -240,8 +240,10 @@ function ChipTimeline({ chips }: { chips: ChipSchedule[] }) {
               </div>
               <span className="text-xs font-bold text-gray-900">{chip.gameweek}</span>
               <span className="text-[10px] font-medium text-gray-500">{chip.name}</span>
-              {chip.optional && (
+              {chip.optional ? (
                 <span className="text-[9px] text-gray-400 italic">optional</span>
+              ) : (
+                <span className="text-[9px] font-semibold text-emerald-600 uppercase tracking-wide">Required</span>
               )}
             </div>
             {/* Connector arrow */}
