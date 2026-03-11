@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { getEnvConfig } from "~/config/env";
-import { getOptionalAuth } from "~/lib/pocketbase/auth";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import { createServerClient } from "~/lib/pocketbase/client";
 import { MiniGameCard } from "~/components/MiniGameCard/MiniGameCard";
 import { MiniGameLeaderboard } from "~/components/MiniGameLeaderboard/MiniGameLeaderboard";
@@ -36,7 +36,7 @@ interface LoaderData {
 }
 
 export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
-  const user = await getOptionalAuth(request);
+  const user = await requireAuth(request);
   const config = getEnvConfig();
 
   const emptyResult: LoaderData = {

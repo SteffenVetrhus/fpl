@@ -10,7 +10,13 @@ import {
   RotateCcw,
   HelpCircle,
 } from "lucide-react";
+import { requireAuth } from "~/lib/pocketbase/auth";
 import type { Route } from "./+types/strategy-corner";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
+  return {};
+}
 
 interface ChipSchedule {
   name: string;
