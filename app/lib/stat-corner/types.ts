@@ -8,7 +8,6 @@ export interface PlayerRecord {
   id: string;
   fpl_id: number;
   understat_id?: number;
-  fbref_id?: string;
   name: string;
   full_name: string;
   team: string;
@@ -59,7 +58,7 @@ export interface PriceSnapshot {
 /** PocketBase ``sync_log`` collection record. */
 export interface SyncLogEntry {
   id: string;
-  service: "fpl_sync" | "understat" | "fbref" | "fplcore";
+  service: "fpl_sync" | "understat" | "fplcore";
   status: "success" | "error";
   records_processed: number;
   duration_seconds: number;
