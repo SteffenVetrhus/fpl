@@ -56,7 +56,11 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     const leagueData = await fetchLeagueData(config.fplLeagueId);
 
     // Determine which gameweek to use
-    const targetEvent = leagueData.currentEvent ?? leagueData.nextEvent;
+    // If the current GW is finished and there's a next GW, show the next GW's mini game
+    const targetEvent =
+      leagueData.currentEvent?.finished && leagueData.nextEvent
+        ? leagueData.nextEvent
+        : (leagueData.currentEvent ?? leagueData.nextEvent);
     if (!targetEvent) {
       return { ...emptyResult, error: "No active or upcoming gameweek found." };
     }
