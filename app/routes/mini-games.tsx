@@ -56,22 +56,46 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
     const leagueData = await fetchLeagueData(config.fplLeagueId);
 
     // Determine which gameweek to use
-    // If the current GW is finished and there's a next GW, show the next GW's mini game
-    const targetEvent =
-      leagueData.currentEvent?.finished && leagueData.nextEvent
-        ? leagueData.nextEvent
-        : (leagueData.currentEvent ?? leagueData.nextEvent);
+    // If the current GW is finished, check if its round still needs completing before advancing
+    let targetEvent = leagueData.currentEvent ?? leagueData.nextEvent;
     if (!targetEvent) {
       return { ...emptyResult, error: "No active or upcoming gameweek found." };
     }
 
-    // Get or create round for this gameweek
-    const round = await getOrCreateRound(
-      pb,
-      config.fplLeagueId,
-      targetEvent.id,
-      targetEvent.deadline_time
-    );
+    let round: MiniGameRound;
+
+    // If current GW is finished, check if its mini game round has been completed
+    // Only advance to next GW once the current round results are stored
+    if (leagueData.currentEvent?.finished && leagueData.nextEvent) {
+      const currentRound = await getOrCreateRound(
+        pb,
+        config.fplLeagueId,
+        leagueData.currentEvent.id,
+        leagueData.currentEvent.deadline_time
+      );
+
+      if (currentRound.status !== "completed") {
+        // Current GW round still needs results — stay on it
+        targetEvent = leagueData.currentEvent;
+        round = currentRound;
+      } else {
+        // Current GW round is done — advance to next GW
+        targetEvent = leagueData.nextEvent;
+        round = await getOrCreateRound(
+          pb,
+          config.fplLeagueId,
+          targetEvent.id,
+          targetEvent.deadline_time
+        );
+      }
+    } else {
+      round = await getOrCreateRound(
+        pb,
+        config.fplLeagueId,
+        targetEvent.id,
+        targetEvent.deadline_time
+      );
+    }
 
     const revealed = isRevealed(round);
 
