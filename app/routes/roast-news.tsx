@@ -16,17 +16,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 const categoryColors: Record<string, string> = {
-  "GW Overlord": "#15803D",
-  "Captain Catastrophe": "#B91C1C",
-  "Season Over": "#1F2937",
-  "Wildcard Wasteman": "#7C3AED",
-  "Haaland Truther": "#0891B2",
-  "João Pedro Enjoyer": "#D97706",
-  "Bald Fraud": "#6B7280",
-  "Ali Why-a": "#92400E",
-  "Benchwarmer's Curse": "#D97706",
-  "Dúbravka Disrespect": "#2563EB",
-  "Erling Disappointment": "#0891B2",
+  // GW31
+  "Captaincy War Crime": "#1F2937",
+  "Free Hit Funeral": "#B91C1C",
+  "Sociopath in Form": "#15803D",
+  "Pathological Salah Truther": "#7C3AED",
+  "Bald & Brain-Dead": "#6B7280",
+  "2nd Place Death Spiral": "#D97706",
+  "League Overlord & Sadist": "#15803D",
+  "Terminal João Pedro Brainrot": "#D97706",
+  "Human White Noise": "#6B7280",
+  "Certified Liability": "#B91C1C",
+  "Collective Trauma": "#0891B2",
 };
 
 export default function RoastNews({ loaderData }: Route.ComponentProps) {
