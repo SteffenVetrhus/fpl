@@ -1,0 +1,20 @@
+{
+  "name": "fpl-youtube-pipeline",
+  "version": "1.0.0",
+  "description": "FPL Stats Lab YouTube pipeline — stats fetcher + voice/video tools",
+  "type": "module",
+  "scripts": {
+    "fetch-stats": "tsx src/pipeline.ts",
+    "voice": "tsx src/voice-generator-cli.ts",
+    "upload": "tsx src/upload.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "pocketbase": "^0.26.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
