@@ -1,12 +1,18 @@
 # FPL Stats Lab — YouTube Pipeline
 
-AI-powered video content pipeline for FPL analytics. Pulls stats from PocketBase, generates scripts with Claude, creates voice narration with ElevenLabs, and assembles videos with FFmpeg.
+AI-powered FPL YouTube content pipeline. Claude Code is the script writer — no API keys needed for content generation.
 
-## Pipeline Overview
+## How It Works
 
 ```
-PocketBase (stats) → Claude API (script) → ElevenLabs (voice) → FFmpeg (video) → YouTube
+1. npm run fetch-stats     →  pulls stats from PocketBase → saves stats.json + prompt.txt
+2. Claude Code             →  reads prompt.txt, writes script.md + narration.txt + metadata.json
+3. Claude Code             →  commits content to youtube-pipeline/content/
+4. npm run voice           →  (optional) generates narration.mp3 via ElevenLabs
+5. npm run upload          →  (optional) uploads to YouTube
 ```
+
+**Claude Code IS the script generator.** No Anthropic API key needed. Just run the fetch, then ask Claude Code to generate the script from the prompt.
 
 ## Setup
 
@@ -14,87 +20,82 @@ PocketBase (stats) → Claude API (script) → ElevenLabs (voice) → FFmpeg (vi
 cd youtube-pipeline
 npm install
 cp .env.example .env
-# Edit .env with your API keys
+# Set PB_URL, PB_USER, PB_PASS (same as main app)
 ```
 
-### Required API Keys
+## Workflow
 
-| Service | Key | Cost | Purpose |
-|---------|-----|------|---------|
-| PocketBase | `PB_URL`, `PB_USER`, `PB_PASS` | Free (self-hosted) | Stats data |
-| Claude API | `ANTHROPIC_API_KEY` | ~$0.10/script | Script generation |
-| ElevenLabs | `ELEVENLABS_API_KEY` | $5-22/mo | Voice narration |
-| YouTube | OAuth2 credentials | Free | Video upload |
-
-## Usage
-
-### Generate everything (script + voice + video)
+### Step 1: Fetch stats
 ```bash
-GAMEWEEK=28 VIDEO_TYPE=gw-preview npm run generate
+GAMEWEEK=28 VIDEO_TYPE=gw-preview npm run fetch-stats
 ```
 
-### Generate script only (no API keys needed for voice/video)
+This pulls leaderboard data from PocketBase and saves:
+- `output/gw-preview-gw28/stats.json` — raw stats data
+- `output/gw-preview-gw28/prompt.txt` — ready-to-use prompt for Claude Code
+
+### Step 2: Generate script (Claude Code)
+Ask Claude Code:
+> "Generate a video script from youtube-pipeline/output/gw-preview-gw28/prompt.txt"
+
+Claude Code will:
+1. Read the prompt with embedded stats
+2. Write `content/gw-preview-gw28/script.md`
+3. Write `content/gw-preview-gw28/narration.txt`
+4. Write `content/gw-preview-gw28/metadata.json`
+5. Commit the content
+
+### Step 3: Voice generation (optional)
 ```bash
-GAMEWEEK=28 VIDEO_TYPE=gw-review npm run script-only
+GAMEWEEK=28 VIDEO_TYPE=gw-preview npm run voice
 ```
+Requires `ELEVENLABS_API_KEY` in `.env`.
 
-### Upload to YouTube
+### Step 4: Upload to YouTube (optional)
 ```bash
 GAMEWEEK=28 VIDEO_TYPE=gw-preview npm run upload
 ```
+Requires YouTube OAuth2 credentials in `.env`.
 
 ## Video Types
 
 | Type | Schedule | Description |
 |------|----------|-------------|
-| `gw-preview` | Friday | Gameweek preview with captain picks, differentials |
-| `gw-review` | Tuesday | Gameweek review: overperformers, underperformers |
-| `price-watch` | Wednesday | Price risers/fallers with transfer advice |
-| `deep-dive` | Monthly | Deep analytics: xG breakdown, clinical finishing |
+| `gw-preview` | Friday | Captain picks, differentials, players to avoid |
+| `gw-review` | Tuesday | Overperformers vs underperformers, xG reality |
+| `price-watch` | Wednesday | Price risers/fallers, transfer targets |
+| `deep-dive` | Monthly | Full xG breakdown, clinical finishing analysis |
 
-## Output Structure
+## Content Structure
 
-Each run creates a folder in `./output/{video-type}-gw{n}/`:
+Generated scripts are committed to `content/` for version history:
 
 ```
-output/gw-preview-gw28/
-├── script.md        # Full script with metadata
-├── narration.txt    # Clean text for TTS (no visual cues)
-├── metadata.json    # Title, description, tags, thumbnail prompt
-├── narration.mp3    # Voice audio (if ElevenLabs configured)
-├── video.mp4        # Final video (if FFmpeg available)
-└── slides.html      # Slide deck fallback (if no FFmpeg)
+youtube-pipeline/content/
+├── gw-preview-gw28/
+│   ├── script.md        # Full script with metadata
+│   ├── narration.txt    # Clean text for TTS
+│   └── metadata.json    # Title, description, tags
+├── gw-review-gw27/
+│   └── ...
+└── price-watch-gw28/
+    └── ...
 ```
 
-## Weekly Content Calendar
+## Weekly Calendar
 
-| Day | Video | Command |
-|-----|-------|---------|
-| Friday | GW Preview | `VIDEO_TYPE=gw-preview GAMEWEEK=28 npm run generate` |
-| Tuesday | GW Review | `VIDEO_TYPE=gw-review GAMEWEEK=27 npm run generate` |
-| Wednesday | Price Watch | `VIDEO_TYPE=price-watch GAMEWEEK=28 npm run generate` |
-| 1st Sunday | Deep Dive | `VIDEO_TYPE=deep-dive GAMEWEEK=28 npm run generate` |
+| Day | Video | Fetch Command |
+|-----|-------|---------------|
+| Friday | GW Preview | `VIDEO_TYPE=gw-preview GAMEWEEK=28 npm run fetch-stats` |
+| Tuesday | GW Review | `VIDEO_TYPE=gw-review GAMEWEEK=27 npm run fetch-stats` |
+| Wednesday | Price Watch | `VIDEO_TYPE=price-watch GAMEWEEK=28 npm run fetch-stats` |
+| 1st Sunday | Deep Dive | `VIDEO_TYPE=deep-dive GAMEWEEK=28 npm run fetch-stats` |
 
-## Upgrading Visuals
+## Cost
 
-The pipeline starts with simple colored slides + text. To upgrade:
-
-1. **Remotion** — Render your existing React Stat Corner components as video frames
-2. **HeyGen/D-ID** — Add a talking AI avatar over the slides
-3. **Canva/Figma** — Design custom thumbnail templates
-
-## Monetization Path
-
-1. **YouTube Partner Program** — 1,000 subs + 4,000 watch hours
-2. **Affiliate links** — FPL tools, fantasy apps
-3. **Patreon** — Early access to weekly picks
-4. **Sponsorships** — FPL-adjacent brands at ~5K subs
-
-## Cost Estimate
-
-| Monthly | With Avatar | Without Avatar |
-|---------|-------------|----------------|
-| Claude API | ~$2 | ~$2 |
-| ElevenLabs | $5-22 | $5-22 |
-| HeyGen | $24 | $0 |
-| **Total** | **$31-48** | **$7-24** |
+| Service | Cost | Required? |
+|---------|------|-----------|
+| Claude Code | Included | Yes (script generation) |
+| PocketBase | Free (self-hosted) | Yes (stats data) |
+| ElevenLabs | $5-22/mo | Optional (voice) |
+| YouTube API | Free | Optional (auto-upload) |

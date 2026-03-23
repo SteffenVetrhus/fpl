@@ -205,6 +205,37 @@ https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2025-2026
 https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2025-2026/By%20Gameweek/GW{n}/playermatchstats.csv
 ```
 
+## YouTube Pipeline (Claude Code Workflow)
+
+The `youtube-pipeline/` directory contains an AI video content pipeline for the "FPL Stats Lab" YouTube channel. **Claude Code is the script generator** — no API needed.
+
+### Workflow
+1. **Fetch stats:** `cd youtube-pipeline && GAMEWEEK=28 VIDEO_TYPE=gw-preview npm run fetch-stats`
+   - Pulls leaderboard data from PocketBase
+   - Saves `output/{type}-gw{n}/stats.json` and `output/{type}-gw{n}/prompt.txt`
+2. **Generate script:** Claude Code reads `prompt.txt` and writes:
+   - `content/{type}-gw{n}/script.md` — full script with metadata header
+   - `content/{type}-gw{n}/narration.txt` — clean text for TTS (no [VISUAL] cues, [PAUSE] → "...")
+   - `content/{type}-gw{n}/metadata.json` — `{ title, description, tags, thumbnailPrompt }`
+3. **Commit** the content files to `youtube-pipeline/content/`
+4. **Voice** (optional): `npm run voice` — ElevenLabs TTS from narration.txt
+5. **Upload** (optional): `npm run upload` — YouTube Data API
+
+### Video Types
+- `gw-preview` (Friday) — captain picks, differentials, avoid
+- `gw-review` (Tuesday) — overperformers, underperformers, xG vs reality
+- `price-watch` (Wednesday) — price risers/fallers, transfer targets
+- `deep-dive` (monthly) — full xG breakdown, clinical finishing analysis
+
+### Script Generation Rules
+When generating a script from a prompt.txt file:
+- Write the script as a confident, data-driven FPL content creator
+- Reference specific numbers: "Salah leads with 12.4 xG" not "Salah has good stats"
+- Include [VISUAL: description] markers for where charts should appear
+- Include [PAUSE] markers for natural pauses
+- Keep language accessible — explain xG briefly for newer viewers
+- Do NOT use emoji in scripts
+
 ## Docker
 
 Multi-stage Dockerfile included. Final image uses `node:20-alpine`, serves on port 3000.

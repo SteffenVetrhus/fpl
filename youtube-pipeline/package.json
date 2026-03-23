@@ -1,23 +1,20 @@
 {
   "name": "fpl-youtube-pipeline",
   "version": "1.0.0",
-  "description": "AI-powered FPL YouTube video pipeline — script, voice, video generation",
+  "description": "FPL Stats Lab YouTube pipeline — stats fetcher + voice/video tools",
   "type": "module",
   "scripts": {
-    "generate": "tsx src/pipeline.ts",
-    "script-only": "tsx src/pipeline.ts --script-only",
-    "voice-only": "tsx src/pipeline.ts --voice-only",
-    "video-only": "tsx src/pipeline.ts --video-only",
+    "fetch-stats": "tsx src/pipeline.ts",
+    "voice": "tsx src/voice-generator-cli.ts",
     "upload": "tsx src/upload.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "pocketbase": "^0.26.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "pocketbase": "^0.26.0"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0"
   }
 }

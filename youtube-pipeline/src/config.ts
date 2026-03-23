@@ -6,18 +6,9 @@ export interface PipelineConfig {
     user: string;
     pass: string;
   };
-  anthropic: {
-    apiKey: string;
-    model: string;
-  };
   elevenlabs: {
     apiKey: string;
     voiceId: string;
-  };
-  youtube: {
-    clientId: string;
-    clientSecret: string;
-    refreshToken: string;
   };
   outputDir: string;
   videoType: VideoType;
@@ -45,20 +36,11 @@ export function loadConfig(): PipelineConfig {
       user: requireEnv("PB_USER"),
       pass: requireEnv("PB_PASS"),
     },
-    anthropic: {
-      apiKey: requireEnv("ANTHROPIC_API_KEY"),
-      model: optionalEnv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
-    },
     elevenlabs: {
       apiKey: optionalEnv("ELEVENLABS_API_KEY", ""),
       voiceId: optionalEnv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"),
     },
-    youtube: {
-      clientId: optionalEnv("YOUTUBE_CLIENT_ID", ""),
-      clientSecret: optionalEnv("YOUTUBE_CLIENT_SECRET", ""),
-      refreshToken: optionalEnv("YOUTUBE_REFRESH_TOKEN", ""),
-    },
-    outputDir: optionalEnv("OUTPUT_DIR", "./output"),
+    outputDir: optionalEnv("OUTPUT_DIR", "./youtube-pipeline/output"),
     videoType: (optionalEnv("VIDEO_TYPE", "gw-preview") as VideoType),
     gameweek: parseInt(optionalEnv("GAMEWEEK", "1"), 10),
   };
